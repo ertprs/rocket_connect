@@ -1,0 +1,18 @@
+{
+    "port": 5000,
+    "instance": {
+        "name": "instance1",
+        "session_path": "/wapi_files/instance1/session.json",
+        "qr_path": "/wapi_files/instance1/last.qr",
+        "visitors_path": "/wapi_files/instance1/visitors/",
+        "number": "553399731315"
+    },
+    "rocketchat": {
+        "enabled": true,
+        "url": "http://rocketchat:3000",
+        "token": "secret2",
+        "bot": "bot",
+        "pass": "bot@0192",
+        "manager_user": "duda.nogueira"
+    }
+}
