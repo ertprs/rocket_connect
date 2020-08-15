@@ -12,5 +12,6 @@ RUN npm install
 # Run everything after as non-privileged user.
 RUN useradd -ms /bin/bash wapi
 WORKDIR /app
+EXPOSE 3001
 
 ENTRYPOINT [ "/app/entrypoint.sh" ]
