@@ -5,6 +5,9 @@ url_login = config.rocketchat.url + '/api/v1/login/'
 url_info = config.rocketchat.url + '/api/info/'
 url_settings = config.rocketchat.url + '/api/v1/settings/'
 url_livechat_agent = config.rocketchat.url + '/api/v1/livechat/users/agent'
+url_livechat_manager = config.rocketchat.url + '/api/v1/livechat/users/manager'
+url_livechat_department = config.rocketchat.url + '/api/v1/livechat/department'
+url_users_create = config.rocketchat.url + '/api/v1/users.create'
 
 payload = {
     user: config.rocketchat.admin_user,
@@ -12,17 +15,53 @@ payload = {
 }
 
 
+departments_payloads = [
+    {
+        "department": {
+            "enabled": true,
+            "showOnRegistration": true,
+            "email": "email@email.com",
+            "showOnOfflineForm": false,
+            "showOnRegistration": true,
+            "name": "DepartmentA",
+            "description": "created from api"
+        },
+        "agents": [{
+            "username": "debug",
+            "count": 0,
+            "order": 0
+        }]
+    },
+    {
+        "department": {
+            "enabled": true,
+            "showOnRegistration": true,
+            "email": "email@email.com",
+            "showOnOfflineForm": false,
+            "showOnRegistration": true,
+            "name": "DepartmentB",
+            "description": "created from api"
+        },
+        "agents": [{
+            "username": "debug",
+            "count": 0,
+            "order": 0
+        }]
+    }
+]
+
+
 ///
 //SERVER INFO
 ///
 
-console.log(config.rocketchat)
+console.log("ROCKET CONFIG", config.rocketchat)
 
 axios.get(
     url_info
 ).then(
     response => {
-        console.log(response.data)
+        console.log("ROCKET INFO", response.data)
     },
     error => {
         console.log(error)
@@ -59,9 +98,9 @@ axios.post(url_login, payload).then(
                 config_axios
             ).then(
                 (res) => {
-                    console.log(res.config.url, res.config.data)
+                    console.log("SETTINGS: ", res.config.url, res.config.data)
                 },
-                (err) =>{
+                (err) => {
                     console.log(err.config.headers)
                 }
             )
@@ -70,7 +109,6 @@ axios.post(url_login, payload).then(
         //
         // user as agent
         //
-        console.log(config.rocketchat)
         axios.post(
             url_livechat_agent,
             { "username": config.rocketchat.admin_user },
@@ -81,6 +119,77 @@ axios.post(url_login, payload).then(
             }
         )
 
+        //
+        // user as manager
+        //
+        axios.post(
+            url_livechat_manager,
+            { "username": config.rocketchat.admin_user },
+            config_axios
+        ).then(
+            (res) => {
+                console.log(res.config.url, res.config.data)
+            }
+        )
+
+        //
+        // create departments if not exists
+        //
+        axios.get(
+            url_livechat_department,
+            config_axios
+        ).then(
+            (res) => {
+                if (res.data.count == 0) {
+                    departments_payloads.map(department => {
+                        axios.post(
+                            url_livechat_department,
+                            department,
+                            config_axios
+                        ).then(
+                            (res) => {
+                                console.log(res.config.url, res.config.data)
+                            },
+                            (err) => {
+                                console.log(err)
+                            }
+                        )
+
+                    })
+                }
+            }
+        )
+
+        // create agents
+        agents = ["agent1", "agent2"]
+        agents.map(agent => {
+            axios.post(
+                url_users_create,
+                { "name": agent, "email": agent + "@user.tld", "password": agent, "username": agent },
+                config_axios
+            ).then(
+                res => {
+                    console.log(res.data)
+                    // add as agent
+                    axios.post(
+                        url_livechat_agent,
+                        { "username": agent },
+                        config_axios
+                    ).then(
+                        (res) => {
+                            console.log(res.config.url, res.config.data)
+                        }
+                    )
+                    // create department with agents
+
+                },
+                err => {
+                    console.log("did not created " + agent)
+                }
+            )
+
+
+        })
 
     },
     (error) => { console.log(error) },

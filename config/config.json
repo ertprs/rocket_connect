@@ -1,13 +1,17 @@
 {
     "port": 3001,
-    "instance": {
-        "name": "instance1",
-        "session_path": "/wapi_files/instance1/session.json",
-        "qr_path": "/wapi_files/instance1/last.qr",
-        "visitors_path": "/wapi_files/instance1/visitors/",
-        "media_path": "/wapi_files/instance1/media/",
-        "number": "5533XXXXXXX"
-    },
+    "instances": [
+        {
+            "name": "instance1",
+            "session_path": "/wapi_files/instance1/session.json",
+            "qr_path": "/wapi_files/instance1/last.qr",
+            "visitors_path": "/wapi_files/instance1/visitors/",
+            "media_path": "/wapi_files/instance1/media/",
+            "number": "5533XXXXXXX",
+            "department": "DepartmentA",
+            "manager_user": "agent1"
+        }
+    ],
     "rocketchat": {
         "enabled": true,
         "url": "http://rocketchat:3000",

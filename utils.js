@@ -39,7 +39,7 @@ module.exports = {
         )
     },
 
-    register_visitor: function (msg) {
+    register_visitor: function (msg, client) {
         contact = msg.getContact().then(c => {
             console.log("got contact infos, registering the visitor")
             // register the visitor
@@ -48,6 +48,7 @@ module.exports = {
                     "name": c['pushname'],
                     "token": msg.from,
                     "phone": msg.from,
+                    "department": client.instance.department,
                     "customFields": [
                         {
                             "key": "whatsapp_name",
@@ -77,6 +78,7 @@ module.exports = {
 
                     (response) => {
                         visitor.room = response.data.room;
+                        visitor.instance = client.instance
                         console.log("GOT ROOM ", visitor.room)
                         // save the visitor info
                         console.log("REGISTERING VISITOR FILE ", visitor_file)
@@ -89,12 +91,11 @@ module.exports = {
                         console.log("send message to livechat room")
                         this.send_rocket_message(visitor, msg).then(
                             (res) => {
-                                global.client.sendSeen(visitor.visitor.token)
+                                client.sendSeen(visitor.visitor.token)
                             }
                         )
-
-
                     },
+
                     (error) => {
                         console.log(error);
                     });
@@ -104,8 +105,23 @@ module.exports = {
             });
         })
 
-    }
+    },
 
-
-
+    get_client: function (userid, visitor_id) {
+        // this function will discover what client
+        // we should use based on the userid and visitor_id
+        let client = null
+        global.config.instances.map(instance => {
+            visitor_file = instance.visitors_path + userid + '.json'
+            // we got a match for the file
+            if (fs.existsSync(visitor_file)) {
+                visitor = require(visitor_file)
+                // we got also a match for the visitor id
+                if (visitor.visitor._id == visitor_id) {
+                    client = global.wapi[visitor.instance.name]
+                }
+            }
+        })
+        return client
+    },
 }
