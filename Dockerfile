@@ -9,6 +9,7 @@ RUN \
   rm -rf /var/lib/apt/lists/*s
 
 RUN npm install
+RUN npm install nodemon -g
 # Run everything after as non-privileged user.
 RUN useradd -ms /bin/bash wapi
 WORKDIR /app

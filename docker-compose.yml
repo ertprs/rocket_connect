@@ -10,8 +10,11 @@ services:
     volumes:
       - .:/app
       - wapi_files:/wapi_files
+    environment:
+      - DEBUG=express:*
     command:
-      node /app/index.js
+      #node /app/index.js
+      nodemon /app/index.js
 
   rocketchat:
     image: rocketchat/rocket.chat:3.5.2

@@ -7,9 +7,11 @@
             "qr_path": "/wapi_files/instance1/last.qr",
             "visitors_path": "/wapi_files/instance1/visitors/",
             "media_path": "/wapi_files/instance1/media/",
+            "media_url": "http://127.0.0.1:3001/media/instance1/",
             "number": "5533XXXXXXX",
             "department": "DepartmentA",
-            "manager_user": "agent1"
+            "manager_user": ["agent1"],
+            "default_closing_message": "Thank you for contacting this company. See you later!"
         }
     ],
     "rocketchat": {
@@ -19,7 +21,7 @@
         "admin_password": "debug",
         "bot": "bot",
         "pass": "bot@0192",
-        "manager_user": "duda.nogueira",
+        "manager_user": ["debug"],
         "secret_token": "wapi_secret"
     }
 }

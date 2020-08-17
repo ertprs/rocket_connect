@@ -1,14 +1,16 @@
 var express = require('express');
+var morgan = require('morgan')
 var app = express();
 
-const { driver } = require('@rocket.chat/sdk');
+const { driver, api } = require('@rocket.chat/sdk');
 
 app.use(express.json());
 
-const { Client, Location } = require('whatsapp-web.js');
+const { Client, Location, MessageMedia } = require('whatsapp-web.js');
 
 var utils = require('./utils');
 
+const FormData = require('form-data');
 const fs = require('fs');
 const axios = require('axios')
 const qrcode = require('qrcode-terminal');
@@ -17,6 +19,7 @@ const qrcodejs = require('qrcodejs')
 const config = require('./config/config.json');
 const { instance } = require('@rocket.chat/sdk/dist/lib/methodCache');
 const { client } = require('@rocket.chat/sdk/dist/lib/api');
+const { restart } = require('nodemon');
 
 // set global configs
 global.config = config
@@ -46,14 +49,22 @@ function initializeInstance(instance) {
     client.on('qr', function (qr) {
         // Generate and scan this code with your phone
         //console.log(this.instance.name, 'QR RECEIVED', qr);
-        fs.writeFileSync(instance.qr_path, qr);
+        //
+        fs.writeFileSync(this.instance.qr_path, qr);
         qrcode.generate(qr, { small: true });
         url_online = "https://api.qrserver.com/v1/create-qr-code/?data=" + qr + '&size=800x800'
-        global.rocket.sendDirectToUser("QR CODE FOR INSTANCE BELOW: " + this.instance.name, config.rocketchat.admin_user)
-        global.rocket.sendDirectToUser(url_online, config.rocketchat.admin_user)
+        message = `${this.instance.name} (${this.instance.number}): QR CODE AVAILABLE`
+
+        //send to rocketchat manager
+        config.rocketchat.manager_user.map(user => {
+            global.rocket.sendDirectToUser(message, user)
+            global.rocket.sendDirectToUser(url_online, user)
+        })
         // send to instance manager
-        global.rocket.sendDirectToUser("QR CODE FOR INSTANCE BELOW: " + this.instance.name, instance.manager_user)
-        global.rocket.sendDirectToUser(url_online, instance.manager_user)
+        this.instance.manager_user.map(user => {
+            global.rocket.sendDirectToUser(message, user)
+            global.rocket.sendDirectToUser(url_online, user)
+        })
 
     });
 
@@ -76,8 +87,8 @@ function initializeInstance(instance) {
     client.on('auth_failure', function (msg) {
         // Fired if session restore was unsuccessfull
         console.error('AUTHENTICATION FAILURE', msg);
-        //this.resetState();
-        fs.unlinkSync(this.instance.session_path)
+        fs.unlinkSync(this.instance.session_path);
+        initializeInstance(instance);
     });
 
     //
@@ -89,17 +100,46 @@ function initializeInstance(instance) {
     client.on('change_state', function (state) {
         console.log(state)
         if (state == "UNPAIRED") {
-            this.resetState();
+            // send to instance manager
+            this.instance.manager_user.map(user => {
+                message = `${this.instance.name} (${this.instance.number}): UNPAIRED`
+                global.rocket.sendDirectToUser(message, user)
+            })
+            this.destroy().then(
+                ok => {
+                    //remove session
+                    fs.unlinkSync(this.instance.session_path);
+                    initializeInstance(instance)
+                }
+            )
+
         }
     });
+
+    //
+    // BATTERY CHANGE
+    //
+    //
+    client.on('change_battery', function (batteryInfo) {
+        // Battery percentage for attached device has changed
+        const { battery, plugged } = batteryInfo;
+        message = `${this.instance.name} (${this.instance.number}): Battery: ${battery}% - Charging? ${plugged}`
+        //instance.manager_user
+        this.instance.manager_user.map(user => {
+            global.rocket.sendDirectToUser(message, user)
+        })
+        // TODO: Alert rocketchat manager if battery hits certain threshold
+    });
+
 
     //
     // READ CHANGE EVENT
     //
     client.on('ready', function () {
-        //app.rock.sendDirectToUser("WAPI READY!", config.rocketchat.manager_user)
-        console.log("WAPI READY! for instance: ", instance.name)
-        global.rocket.sendDirectToUser("WAPI READY! for instance: " + instance.name, instance.manager_user)
+        message = `${this.instance.name} (${this.instance.number}): WAPI READY!`
+        this.instance.manager_user.map(user => {
+            global.rocket.sendDirectToUser(message, user)
+        })
     });
 
     //
@@ -128,6 +168,13 @@ function initializeInstance(instance) {
                         // room is closed, remove the file, so it can be opened again
                         fs.unlinkSync(visitor_file)
                         utils.register_visitor(msg, this)
+                        visitor = require(visitor_file);
+                        utils.send_rocket_message(visitor, msg).then(
+                            ok => {
+                                console.log("room was closed, but we reopened and sent")
+                            }
+                        )
+
                     }
                 }
             )
@@ -138,7 +185,14 @@ function initializeInstance(instance) {
         if (!fs.existsSync(visitor_file)) {
             console.log("visitor file not found")
             // get the contact info
-            utils.register_visitor(msg, this)
+            utils.register_visitor(msg, this);
+            visitor = require(visitor_file);
+            utils.send_rocket_message(visitor, msg).then(
+                ok => {
+                    console.log("room was closed, but we reopened and sent")
+                }
+            )
+
         }
         // if no room, register guest and user id as token
         // create a new room
@@ -178,18 +232,95 @@ initializeRocketApi()
 // test stuff
 app.get('/test', function (req, res) {
 
-    //global.client.sendMessage('553399059200@c.us', "teste")
-    //global.client.sendMessage('553199851271@c.us', "teste")
-    console.log('teste')
-    global.wapi['instance1'].archiveChat('553199851271@c.us')
+    file_path = '/wapi_files/instance1/media/553199851271/ago-2019-Especialidades-Apontadas.pdf'
+    var form = new FormData();
+    form.append('file', fs.createReadStream(file_path));
+    axios({
+        method: 'post',
+        url: global.config.rocketchat.url + '/api/v1/livechat/upload/jGCK2MfNEdMqvvsir',
+        data: form,
+        headers: {
+            'content-type': `multipart/form-data; boundary=${form._boundary}`,
+            'x-visitor-token': '553199851271@c.us'
+        }
+    }).then(function (response) {
+        //handle success
+        console.log(response);
+    }).catch(function (response) {
+        //handle error
+        console.log(response);
+    });
     res.send('ok')
-    // global.rocket.post("im.create", { "username": "debug" }).then(
-    //     ok => {
-    //         global.rocket.post("chat.postMessage", { "roomId": ok.room.rid, "text": "teste" })
-    //     }
-    // )
 })
 
+//
+// check if number has whatsapp
+//
+//
+app.get('/check/:instance/:number', function (req, res) {
+    const instance = req.params.instance
+    number = utils.normalize_cell_number(req.params.number)
+    const client = global.wapi[instance]
+    if (client) {
+        client.isRegisteredUser(number + "@c.us").then(exists => {
+            if (exists) {
+                res.send(exists)
+            } else {
+                return res.status(404).send('Whatsapp Number not Registered')
+            }
+        })
+    } else {
+        return res.status(404).send('Client Instance Not found')
+    }
+
+})
+//
+// send a message to a number from the endpoint
+//
+app.post('/send/:instance/:number', function (req, res) {
+    const instance = req.params.instance
+    const message = req.body.message
+    number = utils.normalize_cell_number(req.params.number)
+    const client = global.wapi[instance]
+    force_rocketchat = req.body.force || false
+    if (client) {
+
+        // check if there is a livechat open for this number
+        visitor_file = client.instance.visitors_path + number + '.json'
+        if (fs.existsSync(visitor_file)) {
+            // visitor found
+            console.log("sending using rocketchat")
+            visitor = require(visitor_file);
+            console.log(req.body)
+            // simple text message to rocketchat
+            url = global.config.rocketchat.url + '/api/v1/livechat/message'
+            client.sendMessage(
+                number + '@c.us', message
+            )
+            utils.send_rocket_text_message(
+                visitor,
+                "MESSAGE SENT TO CUSTOMER: " + message
+            ).then(
+                ok => console.log(ok),
+                err => console.log(err),
+            )
+        } else {
+            console.log("sending direct")
+            // visitor file not found, sending direct
+            client.sendMessage(
+                number + '@c.us', message
+            )
+
+        }
+    } else {
+        return res.status(404).send('Client Instance Not found')
+    }
+    res.send("ok")
+
+})
+//
+//
+//
 app.post('/rocketchat', function (req, res) {
 
     //
@@ -221,19 +352,22 @@ app.post('/rocketchat', function (req, res) {
         // this can avoid rocketchat sync error
         // at sometimes
         if (client) {
+            message = req.body.messages[0]
             console.log("got client")
             console.log('instance:', client.instance.name)
             console.log('to:', req.body.visitor.token)
             console.log('content:', req.body.messages[0].msg)
             message = "*[" + req.body.agent.name + "]*\n" + req.body.messages[0].msg
-
+            console.log("attachments", req.body.messages[0].attachments)
+            console.log("fileUploads", req.body.messages[0].fileUpload)
             // lets close the chat
             if (req.body.messages[0].closingMessage == true) {
                 // send last message
-                if (client.instance.default_closing_message){
+                // if we have a custom one, use it
+                if (client.instance.default_closing_message) {
                     message = "*[" + req.body.agent.name + "]*\n" + client.instance.default_closing_message
                 }
-    
+
                 client.sendMessage(req.body.visitor.token, message).then(message => {
                     // send seen
                     client.sendSeen(req.body.visitor.token)
@@ -244,24 +378,67 @@ app.post('/rocketchat', function (req, res) {
                 // archive the chat
                 console.log("fechando", req.body.visitor.token)
 
-                function arquiva(){
+                function arquiva() {
                     client.archiveChat(req.body.visitor.token)
                 }
                 setTimeout(arquiva, 6000);
-
-
-
                 // regular message, not closing
             } else {
-                client.sendMessage(req.body.visitor.token, message).then(message => {
-                    // send seen
-                    client.sendSeen(req.body.visitor.token)
-                    // simulate typing
-                    message.getChat().then(chat => {
-                        console.log("simulate typing", chat)
-                        chat.sendStateTyping()
+                // attachments
+                if (req.body.messages[0].attachments) {
+                    console.log('SENDING ATTACHMENTS')
+                    // send rocketchat legend as regular chat
+                    if (req.body.messages[0].attachments[0].description != '') {
+                        client.sendMessage(req.body.visitor.token, req.body.messages[0].attachments[0].description).then(message => {
+                            // send seen
+                            client.sendSeen(req.body.visitor.token)
+                            // simulate typing
+                            message.getChat().then(chat => {
+                                console.log("simulate typing", chat)
+                                chat.sendStateTyping()
+                            })
+                        })
+                    }
+                    // read rocketchat attachment
+                    message = req.body.messages[0]
+                    console.log('message', message)
+                    console.log('file', message.file)
+                    console.log('attachments', message.attachments)
+                    console.log('fileUpload', message.fileUpload)
+                    utils.getBase64(message.fileUpload.publicFilePath).then(b64 => {
+                        mm = new MessageMedia(
+                            message.fileUpload.type,
+                            b64,
+                            message.attachments[0].title
+                        )
+                        console.log("mediamessage", mm)
+                        client.sendMessage(req.body.visitor.token, mm).then(
+                            message => {
+                                // send seen
+                                client.sendSeen(req.body.visitor.token)
+                                // simulate typing
+                                message.getChat().then(chat => {
+                                    console.log("simulate typing", chat)
+                                    chat.sendStateTyping()
+                                })
+                            },
+                            err => {
+                                console.log('error while sending message media', err)
+                            }
+                        )
                     })
-                })
+
+                } else {
+                    client.sendMessage(req.body.visitor.token, message).then(message => {
+                        // send seen
+                        client.sendSeen(req.body.visitor.token)
+                        // simulate typing
+                        message.getChat().then(chat => {
+                            console.log("simulate typing", chat)
+                            chat.sendStateTyping()
+                        })
+                    })
+                }
             }
         }
     }
@@ -276,5 +453,10 @@ app.listen(global.config.port, () => {
     console.log("######")
     console.log(`listening on port ${global.config.port}`);
     console.log(global.config);
+    console.log("EXPOSING INSTANCES MEDIA")
+
+    global.config.instances.map(instance => {
+        app.use('/media/' + instance.name, express.static(instance.media_path));
+    })
 });
 

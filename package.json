@@ -14,8 +14,12 @@
     "axios": "^0.19.2",
     "axios-auth-refresh": "^2.2.8",
     "express": "^4.17.1",
+    "form-data": "^3.0.0",
+    "helmet": "^4.1.0",
+    "morgan": "^1.10.0",
     "qrcode-terminal": "^0.12.0",
     "qrcodejs": "^1.0.0",
+    "slugify": "^1.4.5",
     "whatsapp-web.js": "^1.7.0"
   },
   "devDependencies": {
