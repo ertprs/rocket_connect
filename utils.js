@@ -1,6 +1,7 @@
 const axios = require('axios')
 const fs = require('fs');
 var slugify = require('slugify')
+var QRCode = require('qrcode')
 const FormData = require('form-data');
 
 module.exports = {
@@ -42,10 +43,10 @@ module.exports = {
                     } else {
                         // push to talk, always ogg
                         random_filename = Math.random().toString(36).replace(/[^a-z]+/g, '').substr(0, 10);
-                        if (msg.type == "ptt"){
+                        if (msg.type == "ptt") {
                             console.log('ppt')
                             filename = random_filename + '.' + 'ogg'
-                        }else{
+                        } else {
                             filename = random_filename + '.' + media.mimetype.split('/')[1]
                         }
                     }
@@ -79,7 +80,7 @@ module.exports = {
                         //handle error
                         console.log(response);
                     });
-                    
+
                 },
                 (error) => {
                     console.log(error)
@@ -203,9 +204,132 @@ module.exports = {
 
     getBase64: function (url) {
         return axios
-          .get(url, {
-            responseType: 'arraybuffer'
-          })
-          .then(response => Buffer.from(response.data, 'binary').toString('base64'))
-      }
+            .get(url, {
+                responseType: 'arraybuffer'
+            })
+            .then(response => Buffer.from(response.data, 'binary').toString('base64'))
+    },
+
+    send_qr: function (instance, qr) {
+        QRCode.toFile(instance.qr_png_path, qr).then(ok => { console.log(ok) })
+        url_login = config.rocketchat.url + '/api/v1/login/'
+        url_logout = config.rocketchat.url + '/api/v1/logout/'
+        url_im_create = global.config.rocketchat.url + '/api/v1/im.create'
+
+        payload = {
+            user: global.config.rocketchat.bot_username,
+            password: global.config.rocketchat.bot_password
+        }
+        axios.post(url_login, payload).then(
+
+            (response) => {
+                token = response.data.data.authToken
+                userId = response.data.data.userId
+                console.log("LOGADO!")
+
+                var form = new FormData();
+                form.append('file', fs.createReadStream(instance.qr_png_path));
+                form.append('msg', `QR CODE FOR INSTANCE ${instance.name} (${instance.number})`);
+                form.append('description', 'USE THE WHATSAPP TO SCAN THIS QR CODE');
+                form.append('alias', 'WAPI');
+                headers = {
+                    "X-Auth-Token": token,
+                    "X-User-Id": userId,
+                }
+                console.log('headers', headers)
+                let config_axios = {
+                    headers: headers
+                }
+                usernames = global.config.rocketchat.manager_user.concat(
+                    instance.manager_user
+                ).join()
+
+                axios.post(
+                    url_im_create,
+                    { usernames: usernames },
+                    config_axios
+                ).then(room => {
+                    config_axios['headers']['content-type'] = `multipart/form-data; boundary=${form._boundary}`
+                    axios({
+                        method: 'post',
+                        url: global.config.rocketchat.url + '/api/v1/rooms.upload/' + room['data']['room']['rid'],
+                        data: form,
+                        headers: headers,
+                    }).then(function (response) {
+                        //handle success
+                        console.log("qr sent")
+                        axios.post(
+                            url_logout,
+                            '',
+                            config_axios
+                        ).then(
+                            ok => console.log('logout done')
+                        )
+                    }).catch(function (response) {
+                        //handle error
+                    });
+                },
+                    err => {
+                        console.log('err', err)
+                    })
+
+            }
+        )
+    },
+
+    send_text_instance_managers: function (instance, text) {
+        url_login = config.rocketchat.url + '/api/v1/login/'
+        url_logout = config.rocketchat.url + '/api/v1/logout/'
+        url_im_create = global.config.rocketchat.url + '/api/v1/im.create'
+        url_chat_post = global.config.rocketchat.url + '/api/v1/chat.postMessage'
+
+        payload = {
+            user: global.config.rocketchat.bot_username,
+            password: global.config.rocketchat.bot_password
+        }
+
+        axios.post(url_login, payload).then(
+            login => {
+                token = login.data.data.authToken
+                userId = login.data.data.userId
+                headers = {
+                    "X-Auth-Token": token,
+                    "X-User-Id": userId,
+                }
+                let config_axios = {
+                    headers: headers
+                }
+                usernames = global.config.rocketchat.manager_user.concat(
+                    instance.manager_user
+                ).join()
+
+                axios.post(
+                    url_im_create,
+                    { usernames: usernames },
+                    config_axios
+                ).then(
+                    room => {
+                        axios.post(
+                            url_chat_post,
+                            {
+                                roomId: room['data']['room']['rid'],
+                                text: text,
+                                alias: "WAPI"
+                            },
+                            config_axios
+                        ).then(
+                            send => {
+                                console.log(send)
+                            }
+                        )
+                    }
+                )
+
+            },
+            nologin =>{
+                console.log('nologin', nologin)
+            }
+
+        )
+    }
 }

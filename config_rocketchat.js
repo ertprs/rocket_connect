@@ -89,7 +89,12 @@ axios.post(url_login, payload).then(
             ["Show_Setup_Wizard", "completed"],
             ["Log_Level", "2"],
             ["Livechat_enabled", true],
-            ["Livechat_request_comment_when_closing_conversation", false]
+            ["Livechat_request_comment_when_closing_conversation", false],
+            ["Livechat_webhookUrl", "http://wapi:3001/rocketchat"],
+            ["Livechat_secret_token", config.rocketchat.secret_token],
+            ["Livechat_webhook_on_start", true],
+            ["Livechat_webhook_on_close", true],
+            ["Livechat_webhook_on_agent_message", true]
         ]
         for (s in settings) {
             axios.post(
@@ -160,31 +165,47 @@ axios.post(url_login, payload).then(
             }
         )
 
-        // create agents
-        agents = ["agent1", "agent2"]
+        // create agents and bot
+        agents = [
+            {
+                "username": "agent1",
+                "password": "agent1"
+            },
+            {
+                "username": "agent2",
+                "password": "agent2"
+            },
+            {
+                "username": config.rocketchat.bot_username,
+                "password": config.rocketchat.bot_password
+            }
+        ]
         agents.map(agent => {
             axios.post(
                 url_users_create,
-                { "name": agent, "email": agent + "@user.tld", "password": agent, "username": agent },
+                { "name": agent.username, "email": agent.username + "@user.tld", "password": agent.password, "username": agent.username },
                 config_axios
             ).then(
                 res => {
                     console.log(res.data)
                     // add as agent
-                    axios.post(
-                        url_livechat_agent,
-                        { "username": agent },
-                        config_axios
-                    ).then(
-                        (res) => {
-                            console.log(res.config.url, res.config.data)
-                        }
-                    )
+                    if(agent.username != config.rocketchat.bot){
+                        axios.post(
+                            url_livechat_agent,
+                            { "username": agent.username },
+                            config_axios
+                        ).then(
+                            (res) => {
+                                console.log(res.config.url, res.config.data)
+                            }
+                        )
+                    }
                     // create department with agents
 
                 },
                 err => {
-                    console.log("did not created " + agent)
+                    console.log("did not created " + agent.name)
+                    console.log("err " + err)
                 }
             )
 

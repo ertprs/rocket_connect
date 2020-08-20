@@ -5,6 +5,7 @@
             "name": "instance1",
             "session_path": "/wapi_files/instance1/session.json",
             "qr_path": "/wapi_files/instance1/last.qr",
+            "qr_png_path": "/wapi_files/instance1/last.qr.png",
             "visitors_path": "/wapi_files/instance1/visitors/",
             "media_path": "/wapi_files/instance1/media/",
             "media_url": "http://127.0.0.1:3001/media/instance1/",
@@ -19,9 +20,15 @@
         "url": "http://rocketchat:3000",
         "admin_user": "debug",
         "admin_password": "debug",
-        "bot": "bot",
-        "pass": "bot@0192",
+        "bot_username": "bot",
+        "bot_password": "bot@0192",
         "manager_user": ["debug"],
         "secret_token": "wapi_secret"
+    },
+    "puppeteerOptions": {
+        "puppeteer": {
+            "args": ["--no-sandbox", "--disable-setuid-sandbox"],
+            "headless": true
+        }
     }
 }

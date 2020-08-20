@@ -1,4 +1,4 @@
 #!/bin/sh
-chown -R wapi:wapi /wapi_files/
-exec runuser -u wapi "$@"
+chown -R node:node /wapi_files/
+exec runuser -u node "$@"
 
