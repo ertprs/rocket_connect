@@ -12,7 +12,9 @@
             "number": "5533XXXXXXX",
             "department": "DepartmentA",
             "manager_user": ["agent1"],
-            "default_closing_message": "Thank you for contacting company A. See you later!"
+            "default_closing_message": "Thank you for contacting company A. See you later!",
+            "use_rocketchat_business_hours": true,
+            "rocketchat_business_closed_custom_message": "Hi! Right now Company A is closed. We received your message and will get back as soon as possible"
         },
         {
             "name": "instance2",

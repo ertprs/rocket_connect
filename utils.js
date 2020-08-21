@@ -115,6 +115,7 @@ module.exports = {
     },
 
     register_visitor: function (msg, client) {
+        let zap_message = msg
         userid = msg.from.split("@")[0]
         visitor = {
             userid: userid
@@ -171,6 +172,8 @@ module.exports = {
                         this.send_rocket_message(visitor, msg).then(
                             (res) => {
                                 client.sendSeen(visitor.visitor.token)
+                                // alert if closed
+                                this.alert_closed(client.instance, msg)
                             }
                         )
                     },
@@ -341,7 +344,11 @@ module.exports = {
         )
     },
 
-    alert_closed(instance, visitor) {
+    alert_closed(instance, msg) {
+        console.log("##############")
+        console.log("checking if closed")
+        console.log("instance", instance)
+        console.log("msg", msg)
         // get today int day
         today = new Date();
 
@@ -355,11 +362,8 @@ module.exports = {
             userId = response.data.data.userId
 
             var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-            let now = new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" });
-            let now_tz = new Date(now);
-            let hours = ("0" + now_tz.getHours()).slice(-2);
-            let minutes = ("0" + now_tz.getMinutes()).slice(-2);
-            var dayName = days[now_tz.getDay()];
+            let now = new Date()
+            var dayName = days[now.getDay()];
 
             console.log("LOGADO!")
             headers = {
@@ -379,10 +383,34 @@ module.exports = {
                             console.log(day.start.time)
                             time_start = new Date(2020, 08, 20, day.start.time.split(":")[0], day.start.time.split(":")[1]);
                             time_end = new Date(2020, 08, 20, day.finish.time.split(":")[0], day.finish.time.split(":")[1]);
-                            time_now = new Date(2020, 08, 20, hours, minutes);
+                            now = new Date()
+                            time_now = new Date(2020, 08, 20, now.getHours(), now.getMinutes());
                             console.log("time_start", time_start)
                             console.log("time_end", time_end)
-                            console.log(time_start < time_now < time_end)
+                            console.log("time_now", time_now)
+                            opened = time_start < time_now && time_now < time_end
+                            console.log(opened)
+                            // its closed
+                            if(opened == false){
+                                console.log('its closed, send message')
+                                if(instance.use_rocketchat_business_hours){
+                                    // send the custom business closed message
+                                    message = instance.rocketchat_business_closed_custom_message
+                                    // reply custom business closed message
+                                    // to the whatsapp
+                                    console.log(msg)
+                                    msg.reply(message)
+                                    // register this answer at livechat
+                                    this.send_rocket_text_message(
+                                        visitor,
+                                        message
+                                    ).then(
+                                        ok => console.log('closed message sent', ok),
+                                        err => console.log('closed message error while sending', err)
+                                    )
+                                }
+                            }
+
                         }
                     })
                     
@@ -400,4 +428,5 @@ module.exports = {
         // if open, do nothing
         // if closed, send custom message
     }
+
 }

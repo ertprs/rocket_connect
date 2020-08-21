@@ -128,7 +128,7 @@ function initializeInstance(instance) {
         // get user id
         // 5531123456.json for the file
         userid = msg.from.split("@")[0]
-        visitor_file = instance.visitors_path + userid + '.json'
+        visitor_file = this.instance.visitors_path + userid + '.json'
         //
         
         console.log("VISITOR FILE, ", fs.existsSync(visitor_file))
@@ -163,11 +163,12 @@ function initializeInstance(instance) {
             // get the contact info
             utils.register_visitor(msg, this);
             visitor = require(visitor_file);
+            //
             utils.send_rocket_message(visitor, msg).then(
                 ok => {
                     console.log("room was closed, but we reopened and sent")
                     // if closed, alert the client now, only once
-                    utils.check_closed(instance, visitor);
+                    
                 }
             )
 
@@ -211,7 +212,10 @@ initializeRocketApi()
 app.get('/test', function (req, res) {
 
     const instance = global.config.instances[0]
-    utils.alert_closed(instance)
+    teste = utils.alert_closed(instance)
+    console.log(teste)
+    res.status(200).send('OK ae' + teste)
+    
 
     // // file_path = '/wapi_files/instance1/media/553199851271/ago-2019-Especialidades-Apontadas.pdf'
     // // var form = new FormData();
@@ -369,7 +373,7 @@ app.post('/rocketchat', function (req, res) {
                 console.log("fechando", to)
 
                 function arquiva() {
-                    client.archiveChat(req.body.visitor.token)
+                    client.archiveChat(to)
                 }
                 setTimeout(arquiva, 6000);
                 // regular message, not closing
