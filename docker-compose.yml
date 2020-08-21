@@ -13,6 +13,7 @@ services:
     environment:
       - DEBUG=express:*
       - ROCKETCHAT_URL=rocketchat:3000
+      - TZ=America/Sao_Paulo
     command:
       #node /app/index.js
       #nodemon /app/index.js

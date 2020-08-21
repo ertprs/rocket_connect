@@ -95,6 +95,7 @@ axios.post(url_login, payload).then(
             ["Livechat_webhook_on_start", true],
             ["Livechat_webhook_on_close", true],
             ["Livechat_webhook_on_agent_message", true]
+            ["Site_Url", "http://rocketchat:3000"]
         ]
         for (s in settings) {
             axios.post(

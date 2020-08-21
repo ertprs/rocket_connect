@@ -130,9 +130,7 @@ function initializeInstance(instance) {
         userid = msg.from.split("@")[0]
         visitor_file = instance.visitors_path + userid + '.json'
         //
-        visitor = {
-            userid: userid
-        }
+        
         console.log("VISITOR FILE, ", fs.existsSync(visitor_file))
         // check if there is a room already
         if (fs.existsSync(visitor_file)) {
@@ -168,6 +166,8 @@ function initializeInstance(instance) {
             utils.send_rocket_message(visitor, msg).then(
                 ok => {
                     console.log("room was closed, but we reopened and sent")
+                    // if closed, alert the client now, only once
+                    utils.check_closed(instance, visitor);
                 }
             )
 
@@ -210,6 +210,8 @@ initializeRocketApi()
 // test stuff
 app.get('/test', function (req, res) {
 
+    const instance = global.config.instances[0]
+    utils.alert_closed(instance)
 
     // // file_path = '/wapi_files/instance1/media/553199851271/ago-2019-Especialidades-Apontadas.pdf'
     // // var form = new FormData();
@@ -340,7 +342,8 @@ app.post('/rocketchat', function (req, res) {
             visitor = req.body.visitor
             console.log("got client")
             console.log('instance:', client.instance.name)
-            console.log('to:', visitor.token)
+            to = visitor.token.split('@')[0] + '@' + visitor.token.split('@')[1]
+            console.log('to:', to)
             console.log('content:', message.msg)
 
             message_text = "*[" + req.body.agent.name + "]*\n" + message.msg
@@ -355,15 +358,15 @@ app.post('/rocketchat', function (req, res) {
                     message_text = "*[" + req.body.agent.name + "]*\n" + client.instance.default_closing_message
                 }
 
-                client.sendMessage(visitor.token, message_text).then(message => {
+                client.sendMessage(to, message_text).then(message => {
                     // send seen
-                    client.sendSeen(visitor.token)
+                    client.sendSeen(to)
                     // remove visitor file
                     visitor_file = client.instance.visitors_path + userid + '.json'
                     fs.unlinkSync(visitor_file)
                 })
                 // archive the chat
-                console.log("fechando", visitor.token)
+                console.log("fechando", to)
 
                 function arquiva() {
                     client.archiveChat(req.body.visitor.token)
@@ -379,7 +382,7 @@ app.post('/rocketchat', function (req, res) {
 
                     // send rocketchat legend as regular chat
                     if (message.attachments[0].description != '') {
-                        client.sendMessage(visitor.token, message.attachments[0].description).then(m => {
+                        client.sendMessage(to, message.attachments[0].description).then(m => {
                             // send seen
                             client.sendSeen(visitor.token)
                             // simulate typing
@@ -402,10 +405,10 @@ app.post('/rocketchat', function (req, res) {
                             message.attachments[0].title
                         )
                         console.log("mediamessage", mm)
-                        client.sendMessage(visitor.token, mm).then(
+                        client.sendMessage(to, mm).then(
                             message => {
                                 // send seen
-                                client.sendSeen(visitor.token)
+                                client.sendSeen(to)
                                 // simulate typing
                                 message.getChat().then(chat => {
                                     console.log("simulate typing", chat)
@@ -422,9 +425,9 @@ app.post('/rocketchat', function (req, res) {
                 // NO ATTACHMENTS
                 else {
                     // NO ATACHMENTS
-                    client.sendMessage(visitor.token, message_text).then(m => {
+                    client.sendMessage(to, message_text).then(m => {
                         // send seen
-                        client.sendSeen(visitor.token)
+                        client.sendSeen(to)
                         // simulate typing
                         m.getChat().then(chat => {
                             console.log("simulate typing", chat)

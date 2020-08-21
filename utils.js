@@ -3,6 +3,13 @@ const fs = require('fs');
 var slugify = require('slugify')
 var QRCode = require('qrcode')
 const FormData = require('form-data');
+const config = require('./config/config.json');
+
+url_login = config.rocketchat.url + '/api/v1/login/'
+url_logout = config.rocketchat.url + '/api/v1/logout/'
+url_im_create = config.rocketchat.url + '/api/v1/im.create'
+url_chat_post = config.rocketchat.url + '/api/v1/chat.postMessage'
+url_business_hours = config.rocketchat.url + '/api/v1/livechat/office-hours'
 
 module.exports = {
 
@@ -108,13 +115,17 @@ module.exports = {
     },
 
     register_visitor: function (msg, client) {
+        userid = msg.from.split("@")[0]
+        visitor = {
+            userid: userid
+        }
         contact = msg.getContact().then(c => {
             console.log("got contact infos, registering the visitor")
             // register the visitor
             register_visitor = {
                 "visitor": {
                     "name": c['pushname'],
-                    "token": msg.from,
+                    "token": msg.from + '@' + msg.to,
                     "phone": msg.from.split('@')[0],
                     "department": client.instance.department,
                     "customFields": [
@@ -180,7 +191,9 @@ module.exports = {
         // we should use based on the userid and visitor_id
         let client = null
         global.config.instances.map(instance => {
+            console.log("getting client, looking instance " + instance)
             visitor_file = instance.visitors_path + userid + '.json'
+            console.log('visitor_file', visitor_file)
             // we got a match for the file
             if (fs.existsSync(visitor_file)) {
                 visitor = require(visitor_file)
@@ -212,9 +225,7 @@ module.exports = {
 
     send_qr: function (instance, qr) {
         QRCode.toFile(instance.qr_png_path, qr).then(ok => { console.log(ok) })
-        url_login = config.rocketchat.url + '/api/v1/login/'
-        url_logout = config.rocketchat.url + '/api/v1/logout/'
-        url_im_create = global.config.rocketchat.url + '/api/v1/im.create'
+
 
         payload = {
             user: global.config.rocketchat.bot_username,
@@ -278,10 +289,7 @@ module.exports = {
     },
 
     send_text_instance_managers: function (instance, text) {
-        url_login = config.rocketchat.url + '/api/v1/login/'
-        url_logout = config.rocketchat.url + '/api/v1/logout/'
-        url_im_create = global.config.rocketchat.url + '/api/v1/im.create'
-        url_chat_post = global.config.rocketchat.url + '/api/v1/chat.postMessage'
+
 
         payload = {
             user: global.config.rocketchat.bot_username,
@@ -326,10 +334,70 @@ module.exports = {
                 )
 
             },
-            nologin =>{
+            nologin => {
                 console.log('nologin', nologin)
             }
 
         )
+    },
+
+    alert_closed(instance, visitor) {
+        // get today int day
+        today = new Date();
+
+        payload = {
+            user: global.config.rocketchat.admin_user,
+            password: global.config.rocketchat.admin_password
+        }
+
+        axios.post(url_login, payload).then(response => {
+            token = response.data.data.authToken
+            userId = response.data.data.userId
+
+            var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            let now = new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" });
+            let now_tz = new Date(now);
+            let hours = ("0" + now_tz.getHours()).slice(-2);
+            let minutes = ("0" + now_tz.getMinutes()).slice(-2);
+            var dayName = days[now_tz.getDay()];
+
+            console.log("LOGADO!")
+            headers = {
+                "X-Auth-Token": token,
+                "X-User-Id": userId,
+            }
+            let config_axios = {
+                headers: headers
+            }
+            axios.get(
+                url_business_hours,
+                { params:{}, headers: headers }
+            ).then(
+                hours => {
+                    let day = hours.data.officeHours.filter((day) =>{
+                        if(day.day == dayName){
+                            console.log(day.start.time)
+                            time_start = new Date(2020, 08, 20, day.start.time.split(":")[0], day.start.time.split(":")[1]);
+                            time_end = new Date(2020, 08, 20, day.finish.time.split(":")[0], day.finish.time.split(":")[1]);
+                            time_now = new Date(2020, 08, 20, hours, minutes);
+                            console.log("time_start", time_start)
+                            console.log("time_end", time_end)
+                            console.log(time_start < time_now < time_end)
+                        }
+                    })
+                    
+                },
+                nohours => {
+                    console.log(nohours)
+                }
+            )
+
+        })
+
+
+        // get rocket business hours
+        // check if we are open
+        // if open, do nothing
+        // if closed, send custom message
     }
 }
