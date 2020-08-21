@@ -8,26 +8,12 @@
             "qr_png_path": "/wapi_files/instance1/last.qr.png",
             "visitors_path": "/wapi_files/instance1/visitors/",
             "media_path": "/wapi_files/instance1/media/",
-            "media_url": "http://127.0.0.1:3001/media/instance1/",
             "number": "5533XXXXXXX",
             "department": "DepartmentA",
             "manager_user": ["agent1"],
             "default_closing_message": "Thank you for contacting company A. See you later!",
             "use_rocketchat_business_hours": true,
             "rocketchat_business_closed_custom_message": "Hi! Right now Company A is closed. We received your message and will get back as soon as possible"
-        },
-        {
-            "name": "instance2",
-            "session_path": "/wapi_files/instance2/session.json",
-            "qr_path": "/wapi_files/instance2/last.qr",
-            "qr_png_path": "/wapi_files/instance2/last.qr.png",
-            "visitors_path": "/wapi_files/instance2/visitors/",
-            "media_path": "/wapi_files/instance2/media/",
-            "media_url": "http://127.0.0.1:3001/media/instance2/",
-            "number": "5533XXXXXXX",
-            "department": "DepartmentB",
-            "manager_user": ["agent1"],
-            "default_closing_message": "Thank you for contacting company B. See you later!"
         }
     ],
     "rocketchat": {

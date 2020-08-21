@@ -1,11 +1,16 @@
 var express = require('express');
 var morgan = require('morgan')
+var multer = require('multer');
+
+
+
 var app = express();
 
 const { driver, api } = require('@rocket.chat/sdk');
 
 
 app.use(express.json());
+var upload = multer({ dest: 'uploads/' })
 
 const { Client, Location, MessageMedia } = require('whatsapp-web.js');
 
@@ -21,6 +26,9 @@ const config = require('./config/config.json');
 const { instance } = require('@rocket.chat/sdk/dist/lib/methodCache');
 const { client } = require('@rocket.chat/sdk/dist/lib/api');
 const { restart } = require('nodemon');
+
+url_login = config.rocketchat.url + '/api/v1/login/'
+url_room_upload = config.rocketchat.url + '/api/v1/rooms.upload/'
 
 // set global configs
 global.config = config
@@ -87,7 +95,7 @@ function initializeInstance(instance) {
             // send to instance manager
             message = `${this.instance.name} (${this.instance.number}): UNPAIRED`
             utils.send_text_instance_managers(this.instance, message)
-            
+
             this.destroy().then(
                 ok => {
                     //remove session
@@ -130,7 +138,7 @@ function initializeInstance(instance) {
         userid = msg.from.split("@")[0]
         visitor_file = this.instance.visitors_path + userid + '.json'
         //
-        
+
         console.log("VISITOR FILE, ", fs.existsSync(visitor_file))
         // check if there is a room already
         if (fs.existsSync(visitor_file)) {
@@ -168,7 +176,7 @@ function initializeInstance(instance) {
                 ok => {
                     console.log("room was closed, but we reopened and sent")
                     // if closed, alert the client now, only once
-                    
+
                 }
             )
 
@@ -202,6 +210,11 @@ global.config.instances.map(instance => {
     if (!fs.existsSync(instance.visitors_path)) {
         fs.mkdirSync(instance.visitors_path, { recursive: true });
     }
+
+    if (!fs.existsSync(instance.media_path)) {
+        fs.mkdirSync(instance.media_path, { recursive: true });
+    }
+    
     initializeInstance(instance)
 })
 
@@ -215,7 +228,7 @@ app.get('/test', function (req, res) {
     teste = utils.alert_closed(instance)
     console.log(teste)
     res.status(200).send('OK ae' + teste)
-    
+
 
     // // file_path = '/wapi_files/instance1/media/553199851271/ago-2019-Especialidades-Apontadas.pdf'
     // // var form = new FormData();
@@ -267,13 +280,23 @@ app.get('/check/:instance/:number', function (req, res) {
 //
 // send a message to a number from the endpoint
 //
-app.post('/send/:instance/:number', function (req, res) {
+app.post('/send/:instance/:number', upload.single('file'), function (req, res, next) {
+
     const instance = req.params.instance
     const message = req.body.message
     number = utils.normalize_cell_number(req.params.number)
+    wapid = number + '@c.us'
     const client = global.wapi[instance]
     force_rocketchat = req.body.force || false
     if (client) {
+        if (req.file != undefined){
+            // move to instance media path
+            file_to_upload = client.instance.media_path + req.file.originalname
+            fs.copyFileSync(req.file.path, file_to_upload, )
+            fs.unlinkSync(req.file.path)
+        }else{
+            file_to_upload = null
+        }
 
         // check if there is a livechat open for this number
         visitor_file = client.instance.visitors_path + number + '.json'
@@ -284,22 +307,89 @@ app.post('/send/:instance/:number', function (req, res) {
             console.log(req.body)
             // simple text message to rocketchat
             url = global.config.rocketchat.url + '/api/v1/livechat/message'
+            
             client.sendMessage(
-                number + '@c.us', message
+                wapid, message
             )
-            utils.send_rocket_text_message(
-                visitor,
-                "MESSAGE SENT TO CUSTOMER: " + message
-            ).then(
-                ok => console.log(ok),
-                err => console.log(err),
-            )
+            
+            // lets send a file
+            if (req.file != undefined) {
+                // upload to livechat room
+                payload = {
+                    user: global.config.rocketchat.admin_user,
+                    password: global.config.rocketchat.admin_password
+                }
+
+                // 
+                // login to send message with file
+                // to rocketchat
+                //
+                axios.post(url_login, payload).then(response => {
+                    token = response.data.data.authToken
+                    userId = response.data.data.userId
+                    var form = new FormData();
+                    form.append('file', fs.createReadStream(file_to_upload));
+                    headers = {
+                        "X-Auth-Token": token,
+                        "X-User-Id": userId,
+                    }
+                    headers['content-type'] = `multipart/form-data; boundary=${form._boundary}`
+                    console.log('lets send to room')
+                    form.append('msg', "MESSAGE SENT TO CUSTOMER: " + message);
+                    axios({
+                        method: 'post',
+                        url: global.config.rocketchat.url + '/api/v1/rooms.upload/' + visitor.room._id,
+                        data: form,
+                        headers: headers
+                    }).then(function (response) {
+                        //handle success
+                        console.log(response);
+                    }).catch(function (response) {
+                        //handle error
+                        console.log(response);
+                    });
+
+                }, err => {
+                    console.log("err logging in to send file to livechat")
+                })
+                console.log("has file!", req.file)
+            }else{
+                //
+                // no file, only text
+                //
+                utils.send_rocket_text_message(
+                    visitor,
+                    "MESSAGE SENT TO CUSTOMER: " + message
+                ).then(
+                    ok => console.log(ok),
+                    err => console.log(err),
+                )
+            }
         } else {
             console.log("sending direct")
             // visitor file not found, sending direct
             client.sendMessage(
                 number + '@c.us', message
             )
+            if (file_to_upload) {
+                console.log("file sent!")
+                console.log(req.file)
+                const mm = MessageMedia.fromFilePath(file_to_upload);
+                client.sendMessage(wapid, mm).then(
+                    message => {
+                        // send seen
+                        client.sendSeen(wapid)
+                        // simulate typing
+                        message.getChat().then(chat => {
+                            console.log("simulate typing", chat)
+                            chat.sendStateTyping()
+                        })
+                    },
+                    err => {
+                        console.log('error while sending message media', err)
+                    }
+                )
+            }
 
         }
     } else {
@@ -453,10 +543,5 @@ app.listen(global.config.port, () => {
     console.log("######")
     console.log(`listening on port ${global.config.port}`);
     console.log(global.config);
-    console.log("EXPOSING INSTANCES MEDIA")
-
-    global.config.instances.map(instance => {
-        app.use('/media/' + instance.name, express.static(instance.media_path));
-    })
 });
 
