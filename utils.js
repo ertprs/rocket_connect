@@ -380,22 +380,23 @@ module.exports = {
                 hours => {
                     let day = hours.data.officeHours.filter((day) =>{
                         if(day.day == dayName){
-                            console.log(day.start.time)
+                            console.log("day",day)
                             time_start = new Date(2020, 08, 20, day.start.time.split(":")[0], day.start.time.split(":")[1]);
                             time_end = new Date(2020, 08, 20, day.finish.time.split(":")[0], day.finish.time.split(":")[1]);
                             now = new Date()
                             time_now = new Date(2020, 08, 20, now.getHours(), now.getMinutes());
+                            console.log("day_name", dayName)
                             console.log("time_start", time_start)
                             console.log("time_end", time_end)
                             console.log("time_now", time_now)
                             opened = time_start < time_now && time_now < time_end
                             console.log(opened)
                             // its closed
-                            if(opened == false){
+                            if(opened == false || day.open == false){
                                 console.log('its closed, send message')
                                 if(instance.use_rocketchat_business_hours){
                                     // send the custom business closed message
-                                    message = instance.rocketchat_business_closed_custom_message
+                                    message = instance.custom_closed_message
                                     // reply custom business closed message
                                     // to the whatsapp
                                     console.log(msg)
@@ -403,7 +404,7 @@ module.exports = {
                                     // register this answer at livechat
                                     this.send_rocket_text_message(
                                         visitor,
-                                        message
+                                        "SENT TO CUSOTMER: " +  message
                                     ).then(
                                         ok => console.log('closed message sent', ok),
                                         err => console.log('closed message error while sending', err)

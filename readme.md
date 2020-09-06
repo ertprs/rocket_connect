@@ -5,6 +5,9 @@ roadmap:
 - Test more file format upload - Audio not Working when uploaded, only push to talk
 - Allow per instance business hours
 - Limit extensions for file upload
+- Allow external endpoint for integrations
+- 
+- Bug: when message sent after api send (luan)
 - OK - Send text and file from instance api
 - OK - better media management - do not override - No need to static anymore
 - OK - rocketchat business hour closed compliance

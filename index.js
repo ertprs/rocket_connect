@@ -2,8 +2,6 @@ var express = require('express');
 var morgan = require('morgan')
 var multer = require('multer');
 
-
-
 var app = express();
 
 const { driver, api } = require('@rocket.chat/sdk');
@@ -487,11 +485,7 @@ app.post('/rocketchat', function (req, res) {
                         })
                     }
                     // read rocketchat attachment
-
                     console.log('message', message)
-                    console.log('file', message.file)
-                    console.log('attachments', message.attachments)
-                    console.log('fileUpload', message.fileUpload)
                     utils.getBase64(message.fileUpload.publicFilePath).then(b64 => {
                         mm = new MessageMedia(
                             message.fileUpload.type,
