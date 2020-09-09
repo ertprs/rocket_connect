@@ -12,8 +12,41 @@
             "department": "DepartmentA",
             "manager_user": ["agent1"],
             "default_closing_message": "Thank you for contacting company A. See you later!",
-            "use_rocketchat_business_hours": true,
-            "custom_closed_message": "Hi! Right now Company A is closed. We received your message and will get back as soon as possible"
+            "use_rocketchat_business_hours": false,
+            "custom_closed_message": "Hi! Right now Company A is closed. We received your message and will get back as soon as possible",
+            "use_custom_business_hours": true,
+            "custom_business_hours":[
+                {
+                    "day": "default",
+                    "start": {
+                      "time": "07:45"
+                    },
+                    "finish": {
+                      "time": "18:00"
+                    },
+                    "open": "true"
+                },
+                {
+                    "day": "Saturday",
+                    "start": {
+                      "time": "08:00"
+                    },
+                    "finish": {
+                      "time": "20:00"
+                    },
+                    "open": "false"
+                },
+                {
+                    "day": "Sunday",
+                    "start": {
+                      "time": "10:32"
+                    },
+                    "finish": {
+                      "time": "20:00"
+                    },
+                    "open": "false"
+                }
+            ]
         }
     ],
     "rocketchat": {

@@ -330,7 +330,7 @@ module.exports = {
                             config_axios
                         ).then(
                             send => {
-                                console.log(send)
+                                console.log("SENT TO MANAGERS: ", text)
                             }
                         )
                     }
@@ -342,6 +342,92 @@ module.exports = {
             }
 
         )
+    },
+
+
+
+    check_instance_open: function (instance, now = new Date()) {
+        var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+        var dayName = days[now.getDay()];
+        opened = false
+        if (instance.use_rocketchat_business_hours) {
+            // get rocketchat days
+            // check if return opened or closed
+            let days = global.rocketchat_business_hours.officeHours.filter((day) => {
+                if (day.day == dayName) {
+                    return day
+                }
+            });
+            var day = days[0]
+            console.log("Got day from rocketchat: ", day)
+            var opened = false;
+            // if its opened for the day
+            // check the hours
+            if (day.open) {
+                console.log("day", day)
+                time_start = new Date(2020, 08, 20, day.start.time.split(":")[0], day.start.time.split(":")[1]);
+                time_end = new Date(2020, 08, 20, day.finish.time.split(":")[0], day.finish.time.split(":")[1]);
+                now = new Date()
+                time_now = new Date(2020, 08, 20, now.getHours(), now.getMinutes());
+                console.log("day_name", dayName)
+                console.log("time_start", time_start)
+                console.log("time_end", time_end)
+                console.log("time_now", time_now)
+                var opened = time_start < time_now && time_now < time_end
+                console.log(opened)
+            } else {
+                var opened = false
+            }
+            console.log("instance opened according to rocketchat: ", opened)
+
+
+        }
+        if (instance.use_custom_business_hours) {
+            console.log("using custom business hours")
+            // get from config
+            // get day dict or default
+            var day_config = instance.custom_business_hours.filter((day) => {
+                if (day.day == dayName) {
+                    return day;
+                }
+            });
+            console.log("pelo nome", day_config)
+
+            var day_config_default = instance.custom_business_hours.filter((day) => {
+                if (day.day == "default") {
+                    return day;
+                }
+            });
+            console.log("pelo default", day_config_default)
+
+            if (day_config.length) {
+                day = day_config[0]
+                console.log("day config usado nome", day)
+            } else {
+                day = day_config_default[0]
+                console.log("day config usado (default)", day_config_default)
+            }
+            opened = false;
+            // if its opened for the day
+            // check the hours
+            if (day.open) {
+                time_start = new Date(2020, 08, 20, day.start.time.split(":")[0], day.start.time.split(":")[1]);
+                time_end = new Date(2020, 08, 20, day.finish.time.split(":")[0], day.finish.time.split(":")[1]);
+                now = new Date()
+                time_now = new Date(2020, 08, 20, now.getHours(), now.getMinutes());
+                console.log("day_name", dayName)
+                console.log("time_start", time_start)
+                console.log("time_end", time_end)
+                console.log("time_now", time_now)
+                opened = time_start < time_now && time_now < time_end
+            } else {
+                opened = false
+            }
+        }
+        // no options
+        return opened
+
+
     },
 
     alert_closed(instance, msg) {
@@ -375,26 +461,31 @@ module.exports = {
             }
             axios.get(
                 url_business_hours,
-                { params:{}, headers: headers }
+                { params: {}, headers: headers }
             ).then(
                 hours => {
-                    let day = hours.data.officeHours.filter((day) =>{
-                        if(day.day == dayName){
-                            console.log("day",day)
-                            time_start = new Date(2020, 08, 20, day.start.time.split(":")[0], day.start.time.split(":")[1]);
-                            time_end = new Date(2020, 08, 20, day.finish.time.split(":")[0], day.finish.time.split(":")[1]);
-                            now = new Date()
-                            time_now = new Date(2020, 08, 20, now.getHours(), now.getMinutes());
-                            console.log("day_name", dayName)
-                            console.log("time_start", time_start)
-                            console.log("time_end", time_end)
-                            console.log("time_now", time_now)
-                            opened = time_start < time_now && time_now < time_end
-                            console.log(opened)
+                    let day = hours.data.officeHours.filter((day) => {
+                        if (day.day == dayName) {
+                            opened = false;
+                            // if its opened for the day
+                            // check the hours
+                            if (day.open) {
+                                console.log("day", day)
+                                time_start = new Date(2020, 08, 20, day.start.time.split(":")[0], day.start.time.split(":")[1]);
+                                time_end = new Date(2020, 08, 20, day.finish.time.split(":")[0], day.finish.time.split(":")[1]);
+                                now = new Date()
+                                time_now = new Date(2020, 08, 20, now.getHours(), now.getMinutes());
+                                console.log("day_name", dayName)
+                                console.log("time_start", time_start)
+                                console.log("time_end", time_end)
+                                console.log("time_now", time_now)
+                                opened = time_start < time_now && time_now < time_end
+                                console.log(opened)
+                            }
                             // its closed
-                            if(opened == false || day.open == false){
+                            if (opened == false || day.open == false) {
                                 console.log('its closed, send message')
-                                if(instance.use_rocketchat_business_hours){
+                                if (instance.use_rocketchat_business_hours) {
                                     // send the custom business closed message
                                     message = instance.custom_closed_message
                                     // reply custom business closed message
@@ -404,17 +495,18 @@ module.exports = {
                                     // register this answer at livechat
                                     this.send_rocket_text_message(
                                         visitor,
-                                        "SENT TO CUSOTMER: " +  message
+                                        "SENT TO CUSOTMER: " + message
                                     ).then(
                                         ok => console.log('closed message sent', ok),
                                         err => console.log('closed message error while sending', err)
                                     )
                                 }
                             }
+                            // its open! Let it be, let it be
 
                         }
                     })
-                    
+
                 },
                 nohours => {
                     console.log(nohours)
@@ -428,6 +520,31 @@ module.exports = {
         // check if we are open
         // if open, do nothing
         // if closed, send custom message
+    },
+
+    get_business_hours: function () {
+        // get rocketchat business hours
+        payload = {
+            user: global.config.rocketchat.admin_user,
+            password: global.config.rocketchat.admin_password
+        }
+        axios.post(url_login, payload).then(response => {
+            token = response.data.data.authToken
+            userId = response.data.data.userId
+            // got token,
+            headers = {
+                "X-Auth-Token": token,
+                "X-User-Id": userId,
+            }
+            axios.get(
+                url_business_hours,
+                { params: {}, headers: headers }
+            ).then(hours => {
+                global.rocketchat_business_hours = hours.data
+                console.log(`rocketchat business hours`, global.global.rocketchat_business_hours);
+            })
+        })
+        // and store at global config
     }
 
 }

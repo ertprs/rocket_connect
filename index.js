@@ -199,6 +199,8 @@ function initializeRocketApi() {
     driver.connect({ host: HOST, useSsl: false })
     driver.login({ username: USER, password: PASS })
     global.rocket = driver
+    // get rocketchat business hours
+    utils.get_business_hours()
 }
 
 // Initialie instances
@@ -223,9 +225,9 @@ initializeRocketApi()
 app.get('/test', function (req, res) {
 
     const instance = global.config.instances[0]
-    teste = utils.alert_closed(instance)
-    console.log(teste)
-    res.status(200).send('OK ae' + teste)
+    console.log(global.rocketchat_business_hours)
+    teste = utils.check_instance_open(global.config.instances[0])
+    res.status(200).send("ok: " + teste)
 
 
     // // file_path = '/wapi_files/instance1/media/553199851271/ago-2019-Especialidades-Apontadas.pdf'
@@ -246,7 +248,7 @@ app.get('/test', function (req, res) {
     // //     //handle error
     // //     console.log(response);
     // // });
-    res.send('ok')
+    //res.send('ok')
 })
 
 //
@@ -536,6 +538,6 @@ app.listen(global.config.port, () => {
     console.log("WAPI STARTED")
     console.log("######")
     console.log(`listening on port ${global.config.port}`);
-    console.log(global.config);
+    console.log(`global config`, global.config);
 });
 
