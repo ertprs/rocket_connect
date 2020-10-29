@@ -225,9 +225,16 @@ initializeRocketApi()
 app.get('/test', function (req, res) {
 
     const instance = global.config.instances[0]
-    console.log(global.rocketchat_business_hours)
-    teste = utils.check_instance_open(global.config.instances[0])
-    res.status(200).send("ok: " + teste)
+    var client = global.wapi[instance.name]
+    chats = client.getChats().then(chats =>{
+        chats_unread = chats.filter( chat =>{
+            if (console.log(chat.unreadCount) != "0"){
+                return chat.unreadCount
+            }
+        })
+        console.log(chats_unread)
+    })
+    res.status(200).send("ok")
 
 
     // // file_path = '/wapi_files/instance1/media/553199851271/ago-2019-Especialidades-Apontadas.pdf'
@@ -366,7 +373,7 @@ app.post('/send/:instance/:number', upload.single('file'), function (req, res, n
                 )
             }
         } else {
-            console.log("sending direct")
+            console.log("sending direct", number, message)
             // visitor file not found, sending direct
             client.sendMessage(
                 number + '@c.us', message
