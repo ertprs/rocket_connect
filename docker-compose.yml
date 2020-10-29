@@ -2,16 +2,14 @@ version: '3'
 services:
 
   wapi:
+    image: dudanogueira/wapi:latest
     cap_add: 
       - SYS_ADMIN
     ports:
       - 3001:3001
-    build: .
     volumes:
-      - .:/app
       - wapi_files:/wapi_files
-    env_file:
-      - .env
+      - ./config.json:/app/config/config.json
     command:
       node /app/index.js
 
