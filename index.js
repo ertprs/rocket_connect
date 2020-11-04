@@ -134,6 +134,11 @@ function initializeInstance(instance) {
         // get user id
         // 5531123456.json for the file
         userid = msg.from.split("@")[0]
+        //avoid reacting to status@
+        if (userid == 'status'){
+            console.log("STATUS MESSAGE, IGNORING")
+            return False
+        }
         visitor_file = this.instance.visitors_path + userid + '.json'
         //
 

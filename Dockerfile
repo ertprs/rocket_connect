@@ -7,9 +7,14 @@ RUN \
   apt-get update && \
   apt-get install -y google-chrome-stable && \
   rm -rf /var/lib/apt/lists/*s
-COPY . .
+
+
+ADD package.json /app/
+WORKDIR /app
 RUN npm install
 RUN npm install nodemon -g
+
+ADD . /app
 
 # Run everything after as non-privileged user.
 #RUN useradd -ms /bin/bash wapi
