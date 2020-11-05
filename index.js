@@ -10,7 +10,7 @@ const { driver, api } = require('@rocket.chat/sdk');
 app.use(express.json());
 var upload = multer({ dest: 'uploads/' })
 
-const { Client, Location, MessageMedia } = require('whatsapp-web.js');
+const { Client, Location, MessageMedia, version } = require('whatsapp-web.js');
 
 var utils = require('./utils');
 
@@ -122,20 +122,25 @@ function initializeInstance(instance) {
     // READ CHANGE EVENT
     //
     client.on('ready', function () {
-        message = `${this.instance.name} (${this.instance.number}): WAPI READY!`
-        utils.send_text_instance_managers(this.instance, message)
+        this.getWWebVersion().then(v =>{
+            message = `${this.instance.name} (${this.instance.number}): WAPI READY! (WWVERSION: ${v}, whatsapp.js: ${version})`
+            utils.send_text_instance_managers(this.instance, message)
+        })
     });
+
+
 
     //
     // NEW MESSAGE EVENT
     //
     client.on('message', function (msg) {
-        console.log(msg)
+        console.log("NEW MESSAGE RECEIVED", msg)
         // get user id
         // 5531123456.json for the file
         userid = msg.from.split("@")[0]
+        console.log("userid", userid)
         //avoid reacting to status@
-        if (userid == 'status'){
+        if (msg.from == 'status@broadcast'){
             console.log("STATUS MESSAGE, IGNORING")
             return False
         }
@@ -527,6 +532,7 @@ app.post('/rocketchat', function (req, res) {
                 // NO ATTACHMENTS
                 else {
                     // NO ATACHMENTS
+                    console.log("simple message")
                     client.sendMessage(to, message_text).then(m => {
                         // send seen
                         client.sendSeen(to)

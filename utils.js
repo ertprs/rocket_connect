@@ -179,10 +179,12 @@ module.exports = {
                     },
 
                     (error) => {
+                        console.log("DID NOT GET THE ROOM")
                         console.log(error);
                     });
 
             }, (error) => {
+                console.log("CANNOT REGISTER USER")
                 console.log(error);
             });
         })
