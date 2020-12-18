@@ -15,6 +15,7 @@ RUN npm install
 RUN npm install nodemon -g
 
 ADD . /app
+RUN chown -R node /app
 
 # Run everything after as non-privileged user.
 #RUN useradd -ms /bin/bash wapi

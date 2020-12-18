@@ -5,11 +5,14 @@ var QRCode = require('qrcode')
 const FormData = require('form-data');
 const config = require('./config/config.json');
 
+const { version } = require('whatsapp-web.js');
+
 url_login = config.rocketchat.url + '/api/v1/login/'
 url_logout = config.rocketchat.url + '/api/v1/logout/'
 url_im_create = config.rocketchat.url + '/api/v1/im.create'
 url_chat_post = config.rocketchat.url + '/api/v1/chat.postMessage'
 url_business_hours = config.rocketchat.url + '/api/v1/livechat/office-hours'
+url_offline_message = config.rocketchat.url + '/api/v1/livechat/offline.message'
 
 module.exports = {
 
@@ -173,14 +176,54 @@ module.exports = {
                             (res) => {
                                 client.sendSeen(visitor.visitor.token)
                                 // alert if closed
-                                this.alert_closed(client.instance, msg)
+                                this.alert_closed(client.instance, msg, visitor)
                             }
                         )
+                        console.log("GOING TO INITIAL MESSAGE: ", client.instance.custom_initial_message)
+                        if (client.instance.custom_initial_message) {
+                            //console.log("sending custom initial message: " + client.instance.custom_initial_message)
+                            if (client.instance.custom_initial_message) {
+                                // send initial if closed?
+                                if (!this.check_instance_open(client.instance) && client.instance.say_initial_when_closed) {
+                                    msg.reply(client.instance.custom_initial_message)
+                                    // send to livechat
+                                    this.send_rocket_text_message(
+                                        visitor,
+                                        "*SENT TO CUSTOMER*: " + client.instance.custom_initial_message
+                                    ).then(
+                                        ok => console.log('initial message sent', ok),
+                                        err => console.log('initial message error while sending', err)
+                                    )
+                                }
+
+                            }
+                        }
                     },
 
                     (error) => {
-                        console.log("DID NOT GET THE ROOM")
-                        console.log(error);
+                        console.log("DID NOT GET THE ROOM. ERROR: ", error)
+
+                        if (error.response.data.error == "no-agent-online") {
+                            console.log("SEND OFFLINE MESSAGE BACK")
+                        } else {
+                            console.log("SEND CUSTOM INITIAL MESSAGE")
+                        }
+
+                        // sending offline message 
+                        payload = {
+                            "name": c['pushname'],
+                            "email": userid + "@whatsapp.com",
+                            "message": msg.body,
+                            "department": "59MafZdS5WSmEbgmJ"
+                        }
+                        axios.post(url_offline_message, payload).then(
+                            response => {
+                                console.log('response', response)
+                            },
+                            error => {
+                                console.log('error', error)
+                            }
+                        )
                     });
 
             }, (error) => {
@@ -231,66 +274,71 @@ module.exports = {
     send_qr: function (instance, qr) {
         QRCode.toFile(instance.qr_png_path, qr).then(ok => { console.log(ok) })
 
+        global.wapi[instance.name].getWWebVersion().then(v => {
+            message_version = `(WWVERSION: ${v}, whatsapp.js: ${version})`
 
-        payload = {
-            user: global.config.rocketchat.bot_username,
-            password: global.config.rocketchat.bot_password
-        }
-        axios.post(url_login, payload).then(
-
-            (response) => {
-                token = response.data.data.authToken
-                userId = response.data.data.userId
-                console.log("LOGADO!")
-
-                var form = new FormData();
-                form.append('file', fs.createReadStream(instance.qr_png_path));
-                form.append('msg', `QR CODE FOR INSTANCE ${instance.name} (${instance.number})`);
-                form.append('description', 'USE THE WHATSAPP TO SCAN THIS QR CODE');
-                form.append('alias', 'WAPI');
-                headers = {
-                    "X-Auth-Token": token,
-                    "X-User-Id": userId,
-                }
-                console.log('headers', headers)
-                let config_axios = {
-                    headers: headers
-                }
-                usernames = global.config.rocketchat.manager_user.concat(
-                    instance.manager_user
-                ).join()
-
-                axios.post(
-                    url_im_create,
-                    { usernames: usernames },
-                    config_axios
-                ).then(room => {
-                    config_axios['headers']['content-type'] = `multipart/form-data; boundary=${form._boundary}`
-                    axios({
-                        method: 'post',
-                        url: global.config.rocketchat.url + '/api/v1/rooms.upload/' + room['data']['room']['rid'],
-                        data: form,
-                        headers: headers,
-                    }).then(function (response) {
-                        //handle success
-                        console.log("qr sent")
-                        axios.post(
-                            url_logout,
-                            '',
-                            config_axios
-                        ).then(
-                            ok => console.log('logout done')
-                        )
-                    }).catch(function (response) {
-                        //handle error
-                    });
-                },
-                    err => {
-                        console.log('err', err)
-                    })
-
+            payload = {
+                user: global.config.rocketchat.bot_username,
+                password: global.config.rocketchat.bot_password
             }
-        )
+            axios.post(url_login, payload).then(
+
+                (response) => {
+                    token = response.data.data.authToken
+                    userId = response.data.data.userId
+                    console.log("LOGADO!")
+
+                    var form = new FormData();
+                    form.append('file', fs.createReadStream(instance.qr_png_path));
+                    form.append('msg', `QR CODE FOR INSTANCE ${instance.name} (${instance.number}) - ${message_version}`);
+                    form.append('description', 'USE THE WHATSAPP TO SCAN THIS QR CODE');
+                    form.append('alias', 'WAPI');
+                    headers = {
+                        "X-Auth-Token": token,
+                        "X-User-Id": userId,
+                    }
+                    console.log('headers', headers)
+                    let config_axios = {
+                        headers: headers
+                    }
+                    usernames = global.config.rocketchat.manager_user.concat(
+                        instance.manager_user
+                    ).join()
+
+                    axios.post(
+                        url_im_create,
+                        { usernames: usernames },
+                        config_axios
+                    ).then(room => {
+                        config_axios['headers']['content-type'] = `multipart/form-data; boundary=${form._boundary}`
+                        axios({
+                            method: 'post',
+                            url: global.config.rocketchat.url + '/api/v1/rooms.upload/' + room['data']['room']['rid'],
+                            data: form,
+                            headers: headers,
+                        }).then(function (response) {
+                            //handle success
+                            console.log("qr sent")
+                            axios.post(
+                                url_logout,
+                                '',
+                                config_axios
+                            ).then(
+                                ok => console.log('logout done')
+                            )
+                        }).catch(function (response) {
+                            //handle error
+                        });
+                    },
+                        err => {
+                            console.log('err', err)
+                        })
+
+                }
+            )
+        })
+
+
     },
 
     send_text_instance_managers: function (instance, text) {
@@ -316,9 +364,11 @@ module.exports = {
                     instance.manager_user
                 ).join()
 
+                unique = [...new Set(usernames.split(','))].join(); //get unique
+
                 axios.post(
                     url_im_create,
-                    { usernames: usernames },
+                    { usernames: unique },
                     config_axios
                 ).then(
                     room => {
@@ -346,12 +396,10 @@ module.exports = {
         )
     },
 
-
-
     check_instance_open: function (instance, now = new Date()) {
         var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
         var dayName = days[now.getDay()];
-        opened = false
+        opened = true // default behaviour
         if (instance.use_rocketchat_business_hours) {
             // get rocketchat days
             // check if return opened or closed
@@ -383,8 +431,7 @@ module.exports = {
             console.log("instance opened according to rocketchat: ", opened)
 
 
-        }
-        if (instance.use_custom_business_hours) {
+        } else if (instance.use_custom_business_hours) {
             console.log("using custom business hours")
             // get from config
             // get day dict or default
@@ -423,105 +470,38 @@ module.exports = {
                 console.log("time_now", time_now)
                 opened = time_start < time_now && time_now < time_end
             } else {
+                console.log("day.open false")
                 opened = false
             }
         }
         // no options
+        console.log(`INSTANCE ${instance.name} opened: ${opened}`)
         return opened
 
 
     },
 
-    alert_closed(instance, msg) {
+    alert_closed(instance, msg, visitor) {
         console.log("##############")
         console.log("checking if closed")
         console.log("instance", instance)
         console.log("msg", msg)
         // get today int day
         today = new Date();
+        // its closed, alerting
+        if (!this.check_instance_open(instance)) {
+            message = instance.custom_closed_message
+            msg.reply(message)
 
-        payload = {
-            user: global.config.rocketchat.admin_user,
-            password: global.config.rocketchat.admin_password
-        }
-
-        axios.post(url_login, payload).then(response => {
-            token = response.data.data.authToken
-            userId = response.data.data.userId
-
-            var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-            let now = new Date()
-            var dayName = days[now.getDay()];
-
-            console.log("LOGADO!")
-            headers = {
-                "X-Auth-Token": token,
-                "X-User-Id": userId,
-            }
-            let config_axios = {
-                headers: headers
-            }
-            axios.get(
-                url_business_hours,
-                { params: {}, headers: headers }
+            this.send_rocket_text_message(
+                visitor,
+                "*SENT TO CUSTOMER*: " + message
             ).then(
-                hours => {
-                    let day = hours.data.officeHours.filter((day) => {
-                        if (day.day == dayName) {
-                            opened = false;
-                            // if its opened for the day
-                            // check the hours
-                            if (day.open) {
-                                console.log("day", day)
-                                time_start = new Date(2020, 08, 20, day.start.time.split(":")[0], day.start.time.split(":")[1]);
-                                time_end = new Date(2020, 08, 20, day.finish.time.split(":")[0], day.finish.time.split(":")[1]);
-                                now = new Date()
-                                time_now = new Date(2020, 08, 20, now.getHours(), now.getMinutes());
-                                console.log("day_name", dayName)
-                                console.log("time_start", time_start)
-                                console.log("time_end", time_end)
-                                console.log("time_now", time_now)
-                                opened = time_start < time_now && time_now < time_end
-                                console.log(opened)
-                            }
-                            // its closed
-                            if (opened == false || day.open == false) {
-                                console.log('its closed, send message')
-                                if (instance.use_rocketchat_business_hours) {
-                                    // send the custom business closed message
-                                    message = instance.custom_closed_message
-                                    // reply custom business closed message
-                                    // to the whatsapp
-                                    console.log(msg)
-                                    msg.reply(message)
-                                    // register this answer at livechat
-                                    this.send_rocket_text_message(
-                                        visitor,
-                                        "SENT TO CUSOTMER: " + message
-                                    ).then(
-                                        ok => console.log('closed message sent', ok),
-                                        err => console.log('closed message error while sending', err)
-                                    )
-                                }
-                            }
-                            // its open! Let it be, let it be
-
-                        }
-                    })
-
-                },
-                nohours => {
-                    console.log(nohours)
-                }
+                ok => console.log('closed message sent', ok),
+                err => console.log('closed message error while sending', err)
             )
 
-        })
-
-
-        // get rocket business hours
-        // check if we are open
-        // if open, do nothing
-        // if closed, send custom message
+        }
     },
 
     get_business_hours: function () {

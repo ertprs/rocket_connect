@@ -52,7 +52,7 @@ function initializeInstance(instance) {
         // write to temp file
         fs.writeFileSync(this.instance.qr_path, qr);
         //
-        utils.send_qr(this.instance, qr)
+        utils.send_qr(this.instance, qr, this)
         qrcode.generate(qr, { small: true });
 
 
@@ -112,7 +112,8 @@ function initializeInstance(instance) {
     client.on('change_battery', function (batteryInfo) {
         // Battery percentage for attached device has changed
         const { battery, plugged } = batteryInfo;
-        message = `${this.instance.name} (${this.instance.number}): Battery: ${battery}% - Charging? ${plugged}`
+        plugged_text = plugged ? "Charging" : "Not Charging"
+        message = `${this.instance.name} (${this.instance.number}): :battery: Battery Level: ${battery}% - :electric_plug: ${plugged_text}`
         utils.send_text_instance_managers(this.instance, message)
         // TODO: Alert rocketchat manager if battery hits certain threshold
     });
@@ -122,12 +123,11 @@ function initializeInstance(instance) {
     // READ CHANGE EVENT
     //
     client.on('ready', function () {
-        this.getWWebVersion().then(v =>{
-            message = `${this.instance.name} (${this.instance.number}): WAPI READY! (WWVERSION: ${v}, whatsapp.js: ${version})`
+        this.getWWebVersion().then(v => {
+            message = `${this.instance.name} (${this.instance.number}): WAPI READY! :rocket:  (WWVERSION: ${v}, whatsapp.js: ${version})`
             utils.send_text_instance_managers(this.instance, message)
         })
     });
-
 
 
     //
@@ -140,7 +140,7 @@ function initializeInstance(instance) {
         userid = msg.from.split("@")[0]
         console.log("userid", userid)
         //avoid reacting to status@
-        if (msg.from == 'status@broadcast'){
+        if (msg.from == 'status@broadcast') {
             console.log("STATUS MESSAGE, IGNORING")
             return False
         }
@@ -224,7 +224,7 @@ global.config.instances.map(instance => {
     if (!fs.existsSync(instance.media_path)) {
         fs.mkdirSync(instance.media_path, { recursive: true });
     }
-    
+
     initializeInstance(instance)
 })
 
@@ -234,38 +234,23 @@ initializeRocketApi()
 // test stuff
 app.get('/test', function (req, res) {
 
-    const instance = global.config.instances[0]
-    var client = global.wapi[instance.name]
-    chats = client.getChats().then(chats =>{
-        chats_unread = chats.filter( chat =>{
-            if (console.log(chat.unreadCount) != "0"){
-                return chat.unreadCount
-            }
-        })
-        console.log(chats_unread)
-    })
-    res.status(200).send("ok")
+    const instance = global.config.instances[0];
+    let open = utils.check_instance_open(instance);
+
+    // const instance = global.config.instances[0]
+    // var client = global.wapi[instance.name]
+    // chats = client.getChats().then(chats =>{
+    //     chats_unread = chats.filter( chat =>{
+    //         if (console.log(chat.unreadCount) != "0"){
+    //             return chat.unreadCount
+    //         }
+    //     })
+    //     console.log(chats_unread)
+    // })
+    res.status(200).send("ok " + open)
 
 
-    // // file_path = '/wapi_files/instance1/media/553199851271/ago-2019-Especialidades-Apontadas.pdf'
-    // // var form = new FormData();
-    // // form.append('file', fs.createReadStream(file_path));
-    // // axios({
-    // //     method: 'post',
-    // //     url: global.config.rocketchat.url + '/api/v1/livechat/upload/jGCK2MfNEdMqvvsir',
-    // //     data: form,
-    // //     headers: {
-    // //         'content-type': `multipart/form-data; boundary=${form._boundary}`,
-    // //         'x-visitor-token': '553199851271@c.us'
-    // //     }
-    // // }).then(function (response) {
-    // //     //handle success
-    // //     console.log(response);
-    // // }).catch(function (response) {
-    // //     //handle error
-    // //     console.log(response);
-    // // });
-    //res.send('ok')
+
 })
 
 //
@@ -306,12 +291,12 @@ app.post('/send/:instance/:number', upload.single('file'), function (req, res, n
     const client = global.wapi[instance]
     force_rocketchat = req.body.force || false
     if (client) {
-        if (req.file != undefined){
+        if (req.file != undefined) {
             // move to instance media path
             file_to_upload = client.instance.media_path + req.file.originalname
-            fs.copyFileSync(req.file.path, file_to_upload, )
+            fs.copyFileSync(req.file.path, file_to_upload,)
             fs.unlinkSync(req.file.path)
-        }else{
+        } else {
             file_to_upload = null
         }
 
@@ -324,11 +309,11 @@ app.post('/send/:instance/:number', upload.single('file'), function (req, res, n
             console.log(req.body)
             // simple text message to rocketchat
             url = global.config.rocketchat.url + '/api/v1/livechat/message'
-            
+
             client.sendMessage(
                 wapid, message
             )
-            
+
             // lets send a file
             if (req.file != undefined) {
                 // upload to livechat room
@@ -370,7 +355,7 @@ app.post('/send/:instance/:number', upload.single('file'), function (req, res, n
                     console.log("err logging in to send file to livechat")
                 })
                 console.log("has file!", req.file)
-            }else{
+            } else {
                 //
                 // no file, only text
                 //
@@ -457,7 +442,11 @@ app.post('/rocketchat', function (req, res) {
             console.log('to:', to)
             console.log('content:', message.msg)
 
-            message_text = "*[" + req.body.agent.name + "]*\n" + message.msg
+            if (req.body.agent) {
+                message_text = "*[" + req.body.agent.name + "]*\n" + message.msg
+            } else {
+                message_text = message.msg
+            }
 
             console.log("attachments", message.attachments)
             console.log("fileUploads", message.fileUpload)
@@ -466,7 +455,11 @@ app.post('/rocketchat', function (req, res) {
                 // send last message
                 // if we have a custom one, use it
                 if (client.instance.default_closing_message) {
-                    message_text = "*[" + req.body.agent.name + "]*\n" + client.instance.default_closing_message
+                    if (req.body.agent) {
+                        message_text = "*[" + req.body.agent.name + "]*\n" + client.instance.default_closing_message
+                    } else {
+                        message_text = client.instance.default_closing_message
+                    }
                 }
 
                 client.sendMessage(to, message_text).then(message => {

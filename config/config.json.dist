@@ -14,6 +14,7 @@
             "default_closing_message": "Thank you for contacting company A. See you later!",
             "use_rocketchat_business_hours": false,
             "custom_closed_message": "Hi! Right now Company A is closed. We received your message and will get back as soon as possible",
+            "custom_initial_message": "Hi! This is a first message you receive when interacting at a new, openened channel. Please do this, and please don't do that.",
             "use_custom_business_hours": true,
             "custom_business_hours":[
                 {
@@ -24,7 +25,7 @@
                     "finish": {
                       "time": "18:00"
                     },
-                    "open": "true"
+                    "open": true
                 },
                 {
                     "day": "Saturday",
@@ -34,7 +35,7 @@
                     "finish": {
                       "time": "20:00"
                     },
-                    "open": "false"
+                    "open": false
                 },
                 {
                     "day": "Sunday",
@@ -44,7 +45,7 @@
                     "finish": {
                       "time": "20:00"
                     },
-                    "open": "false"
+                    "open": false
                 }
             ]
         }

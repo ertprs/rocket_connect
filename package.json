@@ -1,7 +1,7 @@
 {
   "name": "wapi",
-  "version": "1.0.0",
-  "description": "Structure",
+  "version": "1.11.1",
+  "description": "Rocketchat WhatsApp Connector",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -22,7 +22,7 @@
     "qrcode-terminal": "^0.12.0",
     "qrcodejs": "^1.0.0",
     "slugify": "^1.4.5",
-    "whatsapp-web.js": "^1.11.0",
+    "whatsapp-web.js": "^1.11.1",
     "whatsapp.js": "0.0.1"
   },
   "devDependencies": {
