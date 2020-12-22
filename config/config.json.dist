@@ -10,22 +10,23 @@
             "media_path": "/wapi_files/instance1/media/",
             "number": "5533XXXXXXX",
             "department": "DepartmentA",
-            "manager_user": ["agent1"],
+            "manager_user": ["debug"],
             "default_closing_message": "Thank you for contacting company A. See you later!",
             "use_rocketchat_business_hours": false,
+            "custom_initial_message": "Hi! This is a first message you receive when interacting at a new, openened channel. \n ✅ Please do this.\n\n ✋ And please don't do that.",
+            "say_initial_when_closed": true,
             "custom_closed_message": "Hi! Right now Company A is closed. We received your message and will get back as soon as possible",
-            "custom_initial_message": "Hi! This is a first message you receive when interacting at a new, openened channel. Please do this, and please don't do that.",
             "use_custom_business_hours": true,
             "custom_business_hours":[
                 {
                     "day": "default",
                     "start": {
-                      "time": "07:45"
+                      "time": "11:14"
                     },
                     "finish": {
                       "time": "18:00"
                     },
-                    "open": true
+                    "open": false
                 },
                 {
                     "day": "Saturday",
