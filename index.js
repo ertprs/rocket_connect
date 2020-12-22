@@ -84,9 +84,6 @@ function initializeInstance(instance) {
     //
     // STATE CHANGE EVENT
     //
-    // TODO: alert changed events to rocket admin
-    // alert battery
-    // alert others
     client.on('change_state', function (state) {
         console.log(state)
         if (state == "UNPAIRED") {
