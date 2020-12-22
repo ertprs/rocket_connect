@@ -180,24 +180,30 @@ module.exports = {
                             }
                         )
                         console.log("GOING TO INITIAL MESSAGE: ", client.instance.custom_initial_message)
-                        if (client.instance.custom_initial_message) {
-                            //console.log("sending custom initial message: " + client.instance.custom_initial_message)
-                            if (client.instance.custom_initial_message) {
-                                // send initial if closed?
-                                if (!this.check_instance_open(client.instance) && client.instance.say_initial_when_closed) {
-                                    msg.reply(client.instance.custom_initial_message)
-                                    // send to livechat
-                                    this.send_rocket_text_message(
-                                        visitor,
-                                        "*SENT TO CUSTOMER*: " + client.instance.custom_initial_message
-                                    ).then(
-                                        ok => console.log('initial message sent', ok),
-                                        err => console.log('initial message error while sending', err)
-                                    )
-                                }
 
+                        //console.log("sending custom initial message: " + client.instance.custom_initial_message)
+                        if (client.instance.custom_initial_message) {
+                            // send initial if closed?
+                            if (
+                                (!this.check_instance_open(client.instance) && client.instance.say_initial_when_closed)
+                                ||
+                                this.check_instance_open(client.instance)
+
+                            ) {
+                                msg.reply(client.instance.custom_initial_message)
+                                // send to livechat
+                                this.send_rocket_text_message(
+                                    visitor,
+                                    "*SENT TO CUSTOMER*: " + client.instance.custom_initial_message
+                                ).then(
+                                    ok => console.log('initial message sent', ok),
+                                    err => console.log('initial message error while sending', err)
+                                )
                             }
+
+
                         }
+
                     },
 
                     (error) => {
@@ -275,7 +281,7 @@ module.exports = {
         QRCode.toFile(instance.qr_png_path, qr).then(ok => { console.log(ok) })
 
         global.wapi[instance.name].getWWebVersion().then(v => {
-            message_version = `(WWVERSION: ${v}, whatsapp.js: ${version})`
+            message_version = `(NODE: ${process.version}, WWVERSION: ${v}, whatsapp.js: ${version})`
 
             payload = {
                 user: global.config.rocketchat.bot_username,
@@ -490,16 +496,20 @@ module.exports = {
         today = new Date();
         // its closed, alerting
         if (!this.check_instance_open(instance)) {
-            message = instance.custom_closed_message
-            msg.reply(message)
+            if (instance.custom_closed_message) {
 
-            this.send_rocket_text_message(
-                visitor,
-                "*SENT TO CUSTOMER*: " + message
-            ).then(
-                ok => console.log('closed message sent', ok),
-                err => console.log('closed message error while sending', err)
-            )
+                message = instance.custom_closed_message
+                msg.reply(message)
+
+                this.send_rocket_text_message(
+                    visitor,
+                    "*SENT TO CUSTOMER*: " + message
+                ).then(
+                    ok => console.log('closed message sent', ok),
+                    err => console.log('closed message error while sending', err)
+                )
+                
+            }
 
         }
     },

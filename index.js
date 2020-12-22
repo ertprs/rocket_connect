@@ -109,8 +109,8 @@ function initializeInstance(instance) {
     client.on('change_battery', function (batteryInfo) {
         // Battery percentage for attached device has changed
         const { battery, plugged } = batteryInfo;
-        plugged_text = plugged ? "Charging" : "Not Charging"
-        message = `${this.instance.name} (${this.instance.number}): :battery: Battery Level: ${battery}% - :electric_plug: ${plugged_text}`
+        plugged_text = plugged ? ":zap: Charging" : ":electric_plug: Not Charging"
+        message = `${this.instance.name} (${this.instance.number}): :battery: Battery Level: ${battery}% - ${plugged_text}`
         utils.send_text_instance_managers(this.instance, message)
         // TODO: Alert rocketchat manager if battery hits certain threshold
     });
@@ -121,7 +121,7 @@ function initializeInstance(instance) {
     //
     client.on('ready', function () {
         this.getWWebVersion().then(v => {
-            message = `${this.instance.name} (${this.instance.number}): WAPI READY! :rocket:  (WWVERSION: ${v}, whatsapp.js: ${version})`
+            message = `${this.instance.name} (${this.instance.number}): WAPI READY! :rocket:  (NODE: ${process.version}, WWVERSION: ${v}, whatsapp.js: ${version})`
             utils.send_text_instance_managers(this.instance, message)
         })
     });

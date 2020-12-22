@@ -21,12 +21,12 @@
                 {
                     "day": "default",
                     "start": {
-                      "time": "11:14"
+                      "time": "07:00"
                     },
                     "finish": {
                       "time": "18:00"
                     },
-                    "open": false
+                    "open": true
                 },
                 {
                     "day": "Saturday",
