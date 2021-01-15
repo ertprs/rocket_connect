@@ -125,7 +125,7 @@ module.exports = {
             userid: userid
         }
         console.log('vvvv', visitor)
-        contact = msg.getContact().then(
+        contact = zap_message.getContact().then(
             c => {
                 console.log("got contact infos, registering the visitor")
                 // register the visitor
@@ -240,9 +240,11 @@ module.exports = {
                     console.log(error);
                 });
             },
+            noc => {
+                console.log('did not get contact infos')
+            }
         )
         console.log("DID NOT GET")
-
     },
 
     get_client: function (userid, visitor_id) {
@@ -597,7 +599,9 @@ module.exports = {
                 ok => {
                     console.log("room was closed, but we reopened and sent")
                     // if closed, alert the client now, only once
-
+                },
+                erro => {
+                    console.log("Could not send the message")
                 }
             )
 

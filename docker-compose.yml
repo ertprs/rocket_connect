@@ -2,7 +2,9 @@ version: '3'
 services:
 
   rocket_connect:
-    image: dudanogueira/rocket_connect:latest
+    user: "node:node"
+    #image: dudanogueira/rocket_connect:latest
+    build: .
     cap_add: 
       - SYS_ADMIN
     ports:
