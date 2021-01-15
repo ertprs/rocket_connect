@@ -32,6 +32,9 @@ url_room_upload = config.rocketchat.url + '/api/v1/rooms.upload/'
 global.config = config
 global.wapi = {}
 
+//
+// INITIALIZATION OF A INSTANCE
+//
 function initializeInstance(instance) {
     // define session
     let sessionCfg;
@@ -132,63 +135,7 @@ function initializeInstance(instance) {
     //
     client.on('message', function (msg) {
         console.log("NEW MESSAGE RECEIVED", msg)
-        // get user id
-        // 5531123456.json for the file
-        userid = msg.from.split("@")[0]
-        console.log("userid", userid)
-        //avoid reacting to status@
-        if (msg.from == 'status@broadcast') {
-            console.log("STATUS MESSAGE, IGNORING")
-            return False
-        }
-        visitor_file = this.instance.visitors_path + userid + '.json'
-        //
-
-        console.log("VISITOR FILE, ", fs.existsSync(visitor_file))
-        // check if there is a room already
-        if (fs.existsSync(visitor_file)) {
-            visitor = require(visitor_file);
-            utils.send_rocket_message(visitor, msg).then(
-                (res) => {
-                    console.log(res.data)
-                },
-                (err) => {
-                    if (err.response.data.error == "room-closed") {
-                        // room is closed, remove the file, so it can be opened again
-                        fs.unlinkSync(visitor_file)
-                        utils.register_visitor(msg, this)
-                        visitor = require(visitor_file);
-                        utils.send_rocket_message(visitor, msg).then(
-                            ok => {
-                                console.log("room was closed, but we reopened and sent")
-                            }
-                        )
-
-                    }
-                }
-            )
-        }
-
-        console.log(fs.existsSync(visitor_file))
-        // no room, lets create a new one
-        if (!fs.existsSync(visitor_file)) {
-            console.log("visitor file not found")
-            // get the contact info
-            utils.register_visitor(msg, this);
-            visitor = require(visitor_file);
-            //
-            utils.send_rocket_message(visitor, msg).then(
-                ok => {
-                    console.log("room was closed, but we reopened and sent")
-                    // if closed, alert the client now, only once
-
-                }
-            )
-
-        }
-        // if no room, register guest and user id as token
-        // create a new room
-
+        utils.handle_incoming_message(this, msg)
     });
 
     // GO!
@@ -196,6 +143,9 @@ function initializeInstance(instance) {
 
 }
 
+//
+// ROCKETCHAT API
+//
 function initializeRocketApi() {
     const HOST = config.rocketchat.url;
     const USER = config.rocketchat.bot_username;
@@ -210,7 +160,7 @@ function initializeRocketApi() {
     utils.get_business_hours()
 }
 
-// Initialie instances
+// INITIALIZE INSTANCES
 global.config.instances.map(instance => {
     // initialize clientes, according to instances
     console.log("###### INITIALIZING CLIENT INSTANCE: " + instance.name)
@@ -228,32 +178,39 @@ global.config.instances.map(instance => {
 // initialize rocketapi
 initializeRocketApi()
 
+//
 // test stuff
+//
 app.get('/test', function (req, res) {
-
     const instance = global.config.instances[0];
-    let open = utils.check_instance_open(instance);
 
-    // const instance = global.config.instances[0]
-    // var client = global.wapi[instance.name]
-    // chats = client.getChats().then(chats =>{
-    //     chats_unread = chats.filter( chat =>{
-    //         if (console.log(chat.unreadCount) != "0"){
-    //             return chat.unreadCount
-    //         }
-    //     })
-    //     console.log(chats_unread)
-    // })
-    res.status(200).send("ok " + open)
+    var client = global.wapi[instance.name]
+    chats = client.getChats().then(chats =>{
+        chats_unread = chats.filter( chat =>{
+            if (chat.unreadCount != "0"){
+                return chat.fetchMessages().then(messages =>{
+                    messages.map(msg =>{
+                        utils.handle_incoming_message(client, msg)
+                        // contact = msg.getContact().then(contato =>{
+                        //     console.log("m, ", msg)
+                        //     console.log("c, ", contato)
+                        //     console.log("###################")
+                            
+                        // })
+                    })
+                    
+                })
+            }
+        })
+        console.log(chats_unread)
+        //res.status(200).send("ok " + chats)
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify(chats_unread));
+    })
 
 
 
 })
-
-//
-// get qr code
-//
-
 
 //
 // check if number has whatsapp
@@ -276,6 +233,7 @@ app.get('/check/:instance/:number', function (req, res) {
     }
 
 })
+
 //
 // send a message to a number from the endpoint
 //
@@ -397,8 +355,9 @@ app.post('/send/:instance/:number', upload.single('file'), function (req, res, n
     res.send("ok")
 
 })
+
 //
-//
+// ROCKETCHAT WEBHOOK ENDPOINT
 //
 app.post('/rocketchat', function (req, res) {
 

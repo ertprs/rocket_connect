@@ -118,125 +118,130 @@ module.exports = {
     },
 
     register_visitor: function (msg, client) {
+        console.log("registering visitor...")
         let zap_message = msg
         userid = msg.from.split("@")[0]
         visitor = {
             userid: userid
         }
-        contact = msg.getContact().then(c => {
-            console.log("got contact infos, registering the visitor")
-            // register the visitor
-            register_visitor = {
-                "visitor": {
-                    "name": c['pushname'],
-                    "token": msg.from + '@' + msg.to,
-                    "phone": msg.from.split('@')[0],
-                    "department": client.instance.department,
-                    "customFields": [
-                        {
-                            "key": "whatsapp_name",
-                            "value": c['pushname'],
-                            "overwrite": false,
-                        },
-                        {
-                            "key": "whatsapp_number",
-                            "value": c['id']['_serialized'].split('@')[0],
-                            "overwrite": false,
-                        }
-                    ]
-                }
-            }
-            url = global.config.rocketchat.url + '/api/v1/livechat/visitor/'
-            axios.post(
-                url, register_visitor
-            ).then((response) => {
-                console.log("visitor registered")
-                visitor.visitor = response.data.visitor;
-                // get a room
-                console.log("getting a room to the visitor")
-                url = global.config.rocketchat.url + '/api/v1/livechat/room/?token=' + visitor.visitor.token
-                axios.get(
-                    url
-                ).then(
-
-                    (response) => {
-                        visitor.room = response.data.room;
-                        visitor.instance = client.instance
-                        console.log("GOT ROOM ", visitor.room)
-                        // save the visitor info
-                        console.log("REGISTERING VISITOR FILE ", visitor_file)
-                        fs.writeFile(visitor_file, JSON.stringify(visitor), function (err) {
-                            if (err) {
-                                console.error(err);
-                            }
-                        });
-                        // send file message to the room
-                        console.log("send message to livechat room")
-                        this.send_rocket_message(visitor, msg).then(
-                            (res) => {
-                                client.sendSeen(visitor.visitor.token)
-                                // alert if closed
-                                this.alert_closed(client.instance, msg, visitor)
-                            }
-                        )
-                        console.log("GOING TO INITIAL MESSAGE: ", client.instance.custom_initial_message)
-
-                        //console.log("sending custom initial message: " + client.instance.custom_initial_message)
-                        if (client.instance.custom_initial_message) {
-                            // send initial if closed?
-                            if (
-                                (!this.check_instance_open(client.instance) && client.instance.say_initial_when_closed)
-                                ||
-                                this.check_instance_open(client.instance)
-
-                            ) {
-                                msg.reply(client.instance.custom_initial_message)
-                                // send to livechat
-                                this.send_rocket_text_message(
-                                    visitor,
-                                    "*SENT TO CUSTOMER*: " + client.instance.custom_initial_message
-                                ).then(
-                                    ok => console.log('initial message sent', ok),
-                                    err => console.log('initial message error while sending', err)
-                                )
-                            }
-
-
-                        }
-
-                    },
-
-                    (error) => {
-                        console.log("DID NOT GET THE ROOM. ERROR: ", error)
-
-                        if (error.response.data.error == "no-agent-online") {
-                            console.log("SEND OFFLINE MESSAGE BACK")
-                        } else {
-                            console.log("SEND CUSTOM INITIAL MESSAGE")
-                        }
-
-                        // sending offline message 
-                        payload = {
-                            "name": c['pushname'],
-                            "email": userid + "@whatsapp.com",
-                            "message": msg.body,
-                            "department": "59MafZdS5WSmEbgmJ"
-                        }
-                        axios.post(url_offline_message, payload).then(
-                            response => {
-                                console.log('response', response)
+        console.log('vvvv', visitor)
+        contact = msg.getContact().then(
+            c => {
+                console.log("got contact infos, registering the visitor")
+                // register the visitor
+                register_visitor = {
+                    "visitor": {
+                        "name": c['pushname'],
+                        "token": msg.from + '@' + msg.to,
+                        "phone": msg.from.split('@')[0],
+                        "department": client.instance.department,
+                        "customFields": [
+                            {
+                                "key": "whatsapp_name",
+                                "value": c['pushname'],
+                                "overwrite": false,
                             },
-                            error => {
-                                console.log('error', error)
+                            {
+                                "key": "whatsapp_number",
+                                "value": c['id']['_serialized'].split('@')[0],
+                                "overwrite": false,
                             }
-                        )
-                    });
+                        ]
+                    }
+                }
+                url = global.config.rocketchat.url + '/api/v1/livechat/visitor/'
+                axios.post(
+                    url, register_visitor
+                ).then((response) => {
+                    console.log("visitor registered")
+                    visitor.visitor = response.data.visitor;
+                    // get a room
+                    console.log("getting a room to the visitor")
+                    url = global.config.rocketchat.url + '/api/v1/livechat/room/?token=' + visitor.visitor.token
+                    axios.get(
+                        url
+                    ).then(
 
-            }, (error) => {
-                console.log("CANNOT REGISTER USER")
-                console.log(error);
-            });
-        })
+                        (response) => {
+                            visitor.room = response.data.room;
+                            visitor.instance = client.instance
+                            console.log("GOT ROOM ", visitor.room)
+                            // save the visitor info
+                            console.log("REGISTERING VISITOR FILE ", visitor_file)
+                            fs.writeFile(visitor_file, JSON.stringify(visitor), function (err) {
+                                if (err) {
+                                    console.error(err);
+                                }
+                            });
+                            // send file message to the room
+                            console.log("send message to livechat room")
+                            this.send_rocket_message(visitor, msg).then(
+                                (res) => {
+                                    client.sendSeen(visitor.visitor.token)
+                                    // alert if closed
+                                    this.alert_closed(client.instance, msg, visitor)
+                                }
+                            )
+                            console.log("GOING TO INITIAL MESSAGE: ", client.instance.custom_initial_message)
+
+                            //console.log("sending custom initial message: " + client.instance.custom_initial_message)
+                            if (client.instance.custom_initial_message) {
+                                // send initial if closed?
+                                if (
+                                    (!this.check_instance_open(client.instance) && client.instance.say_initial_when_closed)
+                                    ||
+                                    this.check_instance_open(client.instance)
+
+                                ) {
+                                    msg.reply(client.instance.custom_initial_message)
+                                    // send to livechat
+                                    this.send_rocket_text_message(
+                                        visitor,
+                                        "*SENT TO CUSTOMER*: " + client.instance.custom_initial_message
+                                    ).then(
+                                        ok => console.log('initial message sent', ok),
+                                        err => console.log('initial message error while sending', err)
+                                    )
+                                }
+
+
+                            }
+
+                        },
+
+                        (error) => {
+                            console.log("DID NOT GET THE ROOM. ERROR: ", error)
+
+                            if (error.response.data.error == "no-agent-online") {
+                                console.log("SEND OFFLINE MESSAGE BACK")
+                            } else {
+                                console.log("SEND CUSTOM INITIAL MESSAGE")
+                            }
+
+                            // sending offline message 
+                            payload = {
+                                "name": c['pushname'],
+                                "email": userid + "@whatsapp.com",
+                                "message": msg.body,
+                                "department": "59MafZdS5WSmEbgmJ"
+                            }
+                            axios.post(url_offline_message, payload).then(
+                                response => {
+                                    console.log('response', response)
+                                },
+                                error => {
+                                    console.log('error', error)
+                                }
+                            )
+                        });
+
+                }, (error) => {
+                    console.log("CANNOT REGISTER USER")
+                    console.log(error);
+                });
+            },
+        )
+        console.log("DID NOT GET")
 
     },
 
@@ -508,7 +513,7 @@ module.exports = {
                     ok => console.log('closed message sent', ok),
                     err => console.log('closed message error while sending', err)
                 )
-                
+
             }
 
         }
@@ -537,6 +542,67 @@ module.exports = {
             })
         })
         // and store at global config
+    },
+
+    handle_incoming_message: function (client, msg) {
+        console.log(client)
+        console.log("HANDLING MESSAGE, ", msg)
+        // get user id
+        // 5531123456.json for the file
+        userid = msg.from.split("@")[0]
+        console.log("userid", userid)
+        //avoid reacting to status@
+        if (msg.from == 'status@broadcast') {
+            console.log("STATUS MESSAGE, IGNORING")
+            return False
+        }
+        visitor_file = client.instance.visitors_path + userid + '.json'
+        //
+
+        console.log("VISITOR FILE, ", fs.existsSync(visitor_file))
+        // check if there is a room already
+        if (fs.existsSync(visitor_file)) {
+            visitor = require(visitor_file);
+            this.send_rocket_message(visitor, msg).then(
+                (res) => {
+                    console.log(res.data)
+                },
+                (err) => {
+                    if (err.response.data.error == "room-closed") {
+                        // room is closed, remove the file, so it can be opened again
+                        fs.unlinkSync(visitor_file)
+                        this.register_visitor(msg, client)
+                        visitor = require(visitor_file);
+                        utils.send_rocket_message(visitor, msg).then(
+                            ok => {
+                                console.log("room was closed, but we reopened and sent")
+                            }
+                        )
+
+                    }
+                }
+            )
+        }
+
+        console.log(fs.existsSync(visitor_file))
+        // no room, lets create a new one
+        if (!fs.existsSync(visitor_file)) {
+            console.log("visitor file not found")
+            // get the contact info
+            this.register_visitor(msg, client);
+            visitor = require(visitor_file);
+            //
+            this.send_rocket_message(visitor, msg).then(
+                ok => {
+                    console.log("room was closed, but we reopened and sent")
+                    // if closed, alert the client now, only once
+
+                }
+            )
+
+        }
+
     }
+
 
 }

@@ -1,5 +1,9 @@
 FROM node
 WORKDIR /app
+
+ENV user node
+
+
 # Install Chromium.
 RUN \
   wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - && \
@@ -9,15 +13,14 @@ RUN \
   rm -rf /var/lib/apt/lists/*s
 
 WORKDIR /app
+RUN mkdir -p /app/node_modules && chown -R node:node /app/
 
-COPY package.json /app/package.json
-RUN npm install
+COPY package*.json ./
 
-COPY . /app
-
-# Run everything after as non-privileged user.
-#RUN useradd -ms /bin/bash wapi
+COPY --chown=node:node . .
 
 EXPOSE 3001
 
-ENTRYPOINT [ "/app/entrypoint.sh" ]
+RUN chown $user --recursive /app/
+USER $user
+RUN npm --save install 
