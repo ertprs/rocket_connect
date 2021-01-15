@@ -1,3 +1,7 @@
+
+// TODO:
+// Add agent1, agent2 and debug as agents and managers to Departments - requires knowing the agentId while registering
+// 
 const axios = require('axios')
 const config = require('./config/config.json');
 
@@ -24,7 +28,8 @@ departments_payloads = [
             "showOnOfflineForm": false,
             "showOnRegistration": true,
             "name": "DepartmentA",
-            "description": "created from api"
+            "description": "created from api",
+            "offlineMessageChannelName": "general",
         },
         "agents": [{
             "username": "debug",
@@ -40,7 +45,8 @@ departments_payloads = [
             "showOnOfflineForm": false,
             "showOnRegistration": true,
             "name": "DepartmentB",
-            "description": "created from api"
+            "description": "created from api",
+            "offlineMessageChannelName": "general",
         },
         "agents": [{
             "username": "debug",
@@ -70,6 +76,7 @@ axios.get(
 
 axios.post(url_login, payload).then(
     (response) => {
+        console.log("CONNECT TO ROCKETCHAT")
         token = response.data.data.authToken
         userId = response.data.data.userId
 
@@ -86,18 +93,22 @@ axios.post(url_login, payload).then(
         //
 
         settings = [
+            ["Accounts_TwoFactorAuthentication_Enforce_Password_Fallback", false],
+            ["Accounts_TwoFactorAuthentication_Enabled", false],
             ["Show_Setup_Wizard", "completed"],
             ["Log_Level", "2"],
             ["Livechat_enabled", true],
             ["Livechat_request_comment_when_closing_conversation", false],
-            ["Livechat_webhookUrl", "http://wapi:3001/rocketchat"],
+            ["Livechat_webhookUrl", "http://rocket_connect:3001/rocketchat"],
             ["Livechat_secret_token", config.rocketchat.secret_token],
             ["Livechat_webhook_on_start", true],
             ["Livechat_webhook_on_close", true],
-            ["Livechat_webhook_on_agent_message", true]
-            ["Site_Url", "http://rocketchat:3000"]
+            ["Livechat_webhook_on_agent_message", true],
+            ["Site_Url", "http://rocketchat:3000"],
+            ["Livechat_accept_chats_with_no_agents", true]
         ]
         for (s in settings) {
+            console.log("CONFIGURANDO: ",settings[s][0])
             axios.post(
                 url_settings + settings[s][0],
                 { value: settings[s][1] },
@@ -107,7 +118,7 @@ axios.post(url_login, payload).then(
                     console.log("SETTINGS: ", res.config.url, res.config.data)
                 },
                 (err) => {
-                    console.log(err.config.headers)
+                    console.log("ERRO: ", settings[s][0], " :", err)
                 }
             )
         }

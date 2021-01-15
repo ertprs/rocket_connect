@@ -223,7 +223,7 @@ module.exports = {
                                 "name": c['pushname'],
                                 "email": userid + "@whatsapp.com",
                                 "message": msg.body,
-                                "department": "59MafZdS5WSmEbgmJ"
+                                "department": "yBCf6zFajf739RnEx"
                             }
                             axios.post(url_offline_message, payload).then(
                                 response => {
@@ -258,7 +258,7 @@ module.exports = {
                 visitor = require(visitor_file)
                 // we got also a match for the visitor id
                 if (visitor.visitor._id == visitor_id) {
-                    client = global.wapi[visitor.instance.name]
+                    client = global.rocket_connect[visitor.instance.name]
                 }
             }
         })
@@ -285,7 +285,7 @@ module.exports = {
     send_qr: function (instance, qr) {
         QRCode.toFile(instance.qr_png_path, qr).then(ok => { console.log(ok) })
 
-        global.wapi[instance.name].getWWebVersion().then(v => {
+        global.rocket_connect[instance.name].getWWebVersion().then(v => {
             message_version = `(NODE: ${process.version}, WWVERSION: ${v}, whatsapp.js: ${version})`
 
             payload = {
@@ -303,7 +303,7 @@ module.exports = {
                     form.append('file', fs.createReadStream(instance.qr_png_path));
                     form.append('msg', `QR CODE FOR INSTANCE ${instance.name} (${instance.number}) - ${message_version}`);
                     form.append('description', 'USE THE WHATSAPP TO SCAN THIS QR CODE');
-                    form.append('alias', 'WAPI');
+                    form.append('alias', 'ROCKET CONNECT');
                     headers = {
                         "X-Auth-Token": token,
                         "X-User-Id": userId,
@@ -315,10 +315,12 @@ module.exports = {
                     usernames = global.config.rocketchat.manager_user.concat(
                         instance.manager_user
                     ).join()
+    
+                    unique = [...new Set(usernames.split(','))].join(); //get unique
 
                     axios.post(
                         url_im_create,
-                        { usernames: usernames },
+                        { usernames: unique },
                         config_axios
                     ).then(room => {
                         config_axios['headers']['content-type'] = `multipart/form-data; boundary=${form._boundary}`
@@ -354,7 +356,6 @@ module.exports = {
 
     send_text_instance_managers: function (instance, text) {
 
-
         payload = {
             user: global.config.rocketchat.bot_username,
             password: global.config.rocketchat.bot_password
@@ -388,7 +389,7 @@ module.exports = {
                             {
                                 roomId: room['data']['room']['rid'],
                                 text: text,
-                                alias: "WAPI"
+                                alias: "ROCKET CONNECT"
                             },
                             config_axios
                         ).then(

@@ -1,18 +1,18 @@
 version: '3'
 services:
 
-  wapi:
-    image: dudanogueira/wapi:latest
+  rocket_connect:
+    image: dudanogueira/rocket_connect:latest
     cap_add: 
       - SYS_ADMIN
     ports:
       - 3001:3001
     volumes:
-      - wapi_files:/wapi_files
-      - ./config.json:/app/config/config.json
+      - rocket_connect_files:/rocket_connect_files
+      - ./config/config.json:/app/config/config.json
     command:
-      node /app/index.js
+      npm run dev
 
 volumes:
-  wapi_files: {}
+  rocket_connect_files: {}
     

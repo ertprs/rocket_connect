@@ -1,9 +1,7 @@
 FROM node
 WORKDIR /app
 
-ENV user node
-
-
+#ENV user node
 # Install Chromium.
 RUN \
   wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - && \
@@ -13,14 +11,14 @@ RUN \
   rm -rf /var/lib/apt/lists/*s
 
 WORKDIR /app
-RUN mkdir -p /app/node_modules && chown -R node:node /app/
+RUN mkdir -p /app/node_modules && chown -R node:node /app/ && mkdir -p /rocket_connect_files/ && chown -R node:node /rocket_connect_files/
+
+USER node
 
 COPY package*.json ./
 
-COPY --chown=node:node . .
+COPY . .
 
 EXPOSE 3001
 
-RUN chown $user --recursive /app/
-USER $user
-RUN npm --save install 
+#RUN chown $user --recursive /app/

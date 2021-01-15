@@ -30,7 +30,7 @@ url_room_upload = config.rocketchat.url + '/api/v1/rooms.upload/'
 
 // set global configs
 global.config = config
-global.wapi = {}
+global.rocket_connect = {}
 
 //
 // INITIALIZATION OF A INSTANCE
@@ -45,7 +45,7 @@ function initializeInstance(instance) {
     const client = new Client({ puppeteerOptions: global.config.puppeteerOptions, session: sessionCfg, instance_name: instance.name });
     client.instance = instance;
     // handle it to global
-    global.wapi[instance.name] = client
+    global.rocket_connect[instance.name] = client
     //
     // QR CODE EVENT
     //
@@ -124,7 +124,7 @@ function initializeInstance(instance) {
     //
     client.on('ready', function () {
         this.getWWebVersion().then(v => {
-            message = `${this.instance.name} (${this.instance.number}): WAPI READY! :rocket:  (NODE: ${process.version}, WWVERSION: ${v}, whatsapp.js: ${version})`
+            message = `${this.instance.name} (${this.instance.number}): READY! :rocket:  (NODE: ${process.version}, WWVERSION: ${v}, whatsapp.js: ${version})`
             utils.send_text_instance_managers(this.instance, message)
         })
     });
@@ -184,7 +184,7 @@ initializeRocketApi()
 app.get('/test', function (req, res) {
     const instance = global.config.instances[0];
 
-    var client = global.wapi[instance.name]
+    var client = global.rocket_connect[instance.name]
     chats = client.getChats().then(chats =>{
         chats_unread = chats.filter( chat =>{
             if (chat.unreadCount != "0"){
@@ -219,7 +219,7 @@ app.get('/test', function (req, res) {
 app.get('/check/:instance/:number', function (req, res) {
     const instance = req.params.instance
     number = utils.normalize_cell_number(req.params.number)
-    const client = global.wapi[instance]
+    const client = global.rocket_connect[instance]
     if (client) {
         client.isRegisteredUser(number + "@c.us").then(exists => {
             if (exists) {
@@ -242,8 +242,8 @@ app.post('/send/:instance/:number', upload.single('file'), function (req, res, n
     const instance = req.params.instance
     const message = req.body.message
     number = utils.normalize_cell_number(req.params.number)
-    wapid = number + '@c.us'
-    const client = global.wapi[instance]
+    rocket_connect_id = number + '@c.us'
+    const client = global.rocket_connect[instance]
     force_rocketchat = req.body.force || false
     if (client) {
         if (req.file != undefined) {
@@ -266,7 +266,7 @@ app.post('/send/:instance/:number', upload.single('file'), function (req, res, n
             url = global.config.rocketchat.url + '/api/v1/livechat/message'
 
             client.sendMessage(
-                wapid, message
+                rocket_connect_id, message
             )
 
             // lets send a file
@@ -332,10 +332,10 @@ app.post('/send/:instance/:number', upload.single('file'), function (req, res, n
                 console.log("file sent!")
                 console.log(req.file)
                 const mm = MessageMedia.fromFilePath(file_to_upload);
-                client.sendMessage(wapid, mm).then(
+                client.sendMessage(rocket_connect_id, mm).then(
                     message => {
                         // send seen
-                        client.sendSeen(wapid)
+                        client.sendSeen(rocket_connect_id)
                         // simulate typing
                         message.getChat().then(chat => {
                             console.log("simulate typing", chat)
@@ -502,7 +502,7 @@ app.post('/rocketchat', function (req, res) {
 
 app.listen(global.config.port, () => {
     console.log("######")
-    console.log("WAPI STARTED")
+    console.log("ROCKET CONNECT STARTED")
     console.log("######")
     console.log(`listening on port ${global.config.port}`);
     console.log(`global config`, global.config);
