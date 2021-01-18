@@ -6,6 +6,7 @@ const FormData = require('form-data');
 const config = require('./config/config.json');
 
 const { version } = require('whatsapp-web.js');
+var Moment = require('moment-timezone');
 
 url_login = config.rocketchat.url + '/api/v1/login/'
 url_logout = config.rocketchat.url + '/api/v1/logout/'
@@ -15,6 +16,16 @@ url_business_hours = config.rocketchat.url + '/api/v1/livechat/office-hours'
 url_offline_message = config.rocketchat.url + '/api/v1/livechat/offline.message'
 
 module.exports = {
+
+    moment: function(instance){
+        if (!instance.language){
+            instance.laguage = "pt-BR"
+        }
+        if (!instance.timezone){
+            instance.timezone = "America/Sao_Paulo"
+        }
+        return new Moment().tz(instance.timezone);
+    },
 
     send_rocket_text_message: function (visitor, text) {
         url = global.config.rocketchat.url + '/api/v1/livechat/message'
@@ -288,7 +299,7 @@ module.exports = {
         QRCode.toFile(instance.qr_png_path, qr).then(ok => { console.log(ok) })
 
         global.rocket_connect[instance.name].getWWebVersion().then(v => {
-            message_version = `(NODE: ${process.version}, WWVERSION: ${v}, whatsapp.js: ${version})`
+            message_version = `(NODE: ${process.version}, WWVERSION: ${v}, whatsapp.js: ${version}) Current Time: ${this.moment(instance)}, Current Timezone: ${instance.timezone}`
 
             payload = {
                 user: global.config.rocketchat.bot_username,
@@ -410,9 +421,10 @@ module.exports = {
         )
     },
 
-    check_instance_open: function (instance, now = new Date()) {
+    check_instance_open: function (instance) {
+        now = this.moment(instance)
         var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-        var dayName = days[now.getDay()];
+        var dayName = days[now.get("Day")];
         opened = true // default behaviour
         if (instance.use_rocketchat_business_hours) {
             // get rocketchat days
@@ -431,8 +443,7 @@ module.exports = {
                 console.log("day", day)
                 time_start = new Date(2020, 08, 20, day.start.time.split(":")[0], day.start.time.split(":")[1]);
                 time_end = new Date(2020, 08, 20, day.finish.time.split(":")[0], day.finish.time.split(":")[1]);
-                now = new Date()
-                time_now = new Date(2020, 08, 20, now.getHours(), now.getMinutes());
+                time_now = new Date(2020, 08, 20, now.get("Hours"), now.get("Minutes"));
                 console.log("day_name", dayName)
                 console.log("time_start", time_start)
                 console.log("time_end", time_end)
@@ -476,8 +487,7 @@ module.exports = {
             if (day.open) {
                 time_start = new Date(2020, 08, 20, day.start.time.split(":")[0], day.start.time.split(":")[1]);
                 time_end = new Date(2020, 08, 20, day.finish.time.split(":")[0], day.finish.time.split(":")[1]);
-                now = new Date()
-                time_now = new Date(2020, 08, 20, now.getHours(), now.getMinutes());
+                time_now = new Date(2020, 08, 20, now.get("Hours"), now.get("Minutes"));
                 console.log("day_name", dayName)
                 console.log("time_start", time_start)
                 console.log("time_end", time_end)

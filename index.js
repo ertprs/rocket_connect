@@ -124,7 +124,7 @@ function initializeInstance(instance) {
     //
     client.on('ready', function () {
         this.getWWebVersion().then(v => {
-            message = `${this.instance.name} (${this.instance.number}): READY! :rocket:  (NODE: ${process.version}, WWVERSION: ${v}, whatsapp.js: ${version})`
+            message = `${this.instance.name} (${this.instance.number}): READY! :rocket:  (NODE: ${process.version}, WWVERSION: ${v}, whatsapp.js: ${version}) Current Time: ${utils.moment(instance)}, Current Timezone: ${instance.timezone}`
             utils.send_text_instance_managers(this.instance, message)
         })
     });
