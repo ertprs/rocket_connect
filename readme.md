@@ -20,12 +20,13 @@ roadmap:
 - OK - Allow per instance business hours
 
 IF YOU WANT TO HELP DEVELOPING:
-
+```
+cp config/config.json.dist config/config.json
 docker-compose -f dev.yml up -d
-
 docker-compose -f dev.yml exec rocket_connect node config_rocketchat
+```
 
-the config_rocketchat will create and setup the environment. It creates DepartmentA, DepartmentB, agent1, agent2 and the admin user: debug (password is equal to username). You should add the agents to the Department.
+the config_rocketchat will create users, agents, departments and setup the environment. It creates DepartmentA, DepartmentB, agent1, agent2 and the admin user: debug (password is equal to username). You should add the agents to the Department.
 
 Login into Rocketchat: http://127.0.0.1:3000
 
